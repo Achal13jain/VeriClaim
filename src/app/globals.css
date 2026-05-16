@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 33% 98%;
+    --foreground: 222 47% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 9%;
+    --primary: 222 65% 12%;
+    --primary-foreground: 190 80% 96%;
+    --secondary: 214 35% 92%;
+    --secondary-foreground: 222 47% 12%;
+    --muted: 214 30% 93%;
+    --muted-foreground: 217 18% 40%;
+    --accent: 190 75% 90%;
+    --accent-foreground: 222 47% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 216 26% 84%;
+    --input: 216 26% 84%;
+    --ring: 195 95% 43%;
+    --radius: 0.5rem;
+    --font-sans: "Inter", "Geist", system-ui, sans-serif;
+    --font-display: "Instrument Serif", "Playfair Display", Georgia, serif;
+    --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 206 40% 96%;
+    --card: 222 39% 9%;
+    --card-foreground: 206 40% 96%;
+    --popover: 222 39% 9%;
+    --popover-foreground: 206 40% 96%;
+    --primary: 185 96% 60%;
+    --primary-foreground: 222 47% 7%;
+    --secondary: 223 28% 16%;
+    --secondary-foreground: 206 40% 96%;
+    --muted: 223 28% 16%;
+    --muted-foreground: 218 16% 68%;
+    --accent: 222 30% 18%;
+    --accent-foreground: 206 40% 96%;
+    --destructive: 0 74% 58%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 24% 20%;
+    --input: 222 24% 20%;
+    --ring: 185 96% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.28) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.22) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  ::selection {
+    background: rgba(53, 242, 164, 0.28);
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply border border-white/20 bg-white/70 shadow-glass backdrop-blur-2xl dark:border-white/10 dark:bg-white/10;
+  }
+
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8;
+  }
+
+  .section-eyebrow {
+    @apply font-mono text-xs font-semibold uppercase text-sky-600 dark:text-sky-300;
+  }
+
+  .court-scan {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .court-scan::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgba(53, 242, 164, 0.12),
+      transparent
+    );
+    animation: scan-line 6s linear infinite;
+  }
+}
