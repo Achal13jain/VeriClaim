@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BadgeCheck, Coins, Loader2, Play } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  BadgeCheck,
+  Coins,
+  Loader2,
+  Play,
+} from "lucide-react";
 
 import { AgentCourtTimeline } from "@/components/vericlaim/agent-court-timeline";
 import { JSONPreview } from "@/components/vericlaim/json-preview";
@@ -25,42 +32,234 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ForgeResponseSchema, type ForgeResponse } from "@/lib/agents/schemas";
 import { featuredSpec } from "@/lib/mock-data";
-import type { AgentRole, SourceType } from "@/lib/types";
+import type {
+  AgentRole,
+  AgentTraceStep,
+  MarketSpecRecord,
+  SourceType,
+} from "@/lib/types";
 
 const forgePhases: Array<{
   event: string;
   label: string;
   role?: AgentRole;
+  progress: number;
 }> = [
-  { event: "forger:start", label: "Forger reading source claim", role: "forger" },
-  { event: "forger:token", label: "Forger drafting canonical question", role: "forger" },
-  { event: "forger:done", label: "Forger produced MarketSpec JSON", role: "forger" },
-  { event: "critic:start", label: "Critic attacking ambiguity", role: "critic" },
-  { event: "critic:token", label: "Critic testing edge cases", role: "critic" },
-  { event: "critic:done", label: "Critic objections ready", role: "critic" },
-  { event: "judge:start", label: "Judge reviewing revised spec", role: "judge" },
-  { event: "judge:token", label: "Judge scoring confidence", role: "judge" },
-  { event: "judge:done", label: "Judge verdict blessed", role: "judge" },
-  { event: "persist:start", label: "Mock persistence prepared" },
-  { event: "persist:done", label: "Public page preview ready" },
-  { event: "complete", label: "Demo fallback complete" },
+  {
+    event: "forger:running",
+    label: "Forger running",
+    role: "forger",
+    progress: 25,
+  },
+  {
+    event: "critic:running",
+    label: "Critic running",
+    role: "critic",
+    progress: 55,
+  },
+  {
+    event: "judge:running",
+    label: "Judge running",
+    role: "judge",
+    progress: 82,
+  },
+  {
+    event: "complete",
+    label: "MarketSpec ready",
+    progress: 100,
+  },
 ];
 
 const sourceTypes: SourceType[] = [
   "manual",
   "discord",
-  "news",
-  "social",
-  "rss",
-  "research",
+  "tweet",
+  "article",
+  "non_english",
+  "github_signal",
 ];
+
+const sourceLabels: Record<SourceType, string> = {
+  manual: "Manual",
+  discord: "Discord",
+  tweet: "Tweet",
+  article: "Article",
+  non_english: "Non-English",
+  github_signal: "GitHub signal",
+};
+
+function makeDisplayHash(input: string) {
+  let hash = 0x811c9dc5;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  const seed = (hash >>> 0).toString(16).padStart(8, "0");
+  return `0x${seed.repeat(8).slice(0, 64)}`;
+}
+
+function traceSummary(trace: unknown, fallback: string) {
+  if (
+    trace &&
+    typeof trace === "object" &&
+    "summary" in trace &&
+    typeof trace.summary === "string"
+  ) {
+    return trace.summary;
+  }
+
+  return fallback;
+}
+
+function responseToTimeline(response: ForgeResponse): AgentTraceStep[] {
+  return [
+    {
+      agentId: "forger-001",
+      role: "forger",
+      title: "Forger output",
+      summary: traceSummary(
+        response.agent_trace.forger,
+        `Canonicalized claim: ${response.canonical_claim}`,
+      ),
+      status: "complete",
+      score: response.scores.quality,
+    },
+    {
+      agentId: "critic-001",
+      role: "critic",
+      title: "Critic objections",
+      summary: traceSummary(
+        response.agent_trace.critic,
+        response.critic.objections[0] ?? "Critic completed review.",
+      ),
+      status: "complete",
+      score: 100 - response.scores.ambiguity,
+    },
+    {
+      agentId: "judge-001",
+      role: "judge",
+      title: "Judge verdict",
+      summary: traceSummary(
+        response.agent_trace.judge,
+        `${response.judge.verdict} with ${response.judge.confidence}% confidence.`,
+      ),
+      status: "complete",
+      score: response.judge.confidence,
+    },
+  ];
+}
+
+function responseToRecord(response: ForgeResponse): MarketSpecRecord {
+  return {
+    hash: makeDisplayHash(JSON.stringify(response)),
+    sourceClaim: response.source_claim,
+    canonicalClaim: response.canonical_claim,
+    sourceType: response.source_type,
+    marketSpec: {
+      question: response.market_spec.question,
+      outcomes: response.market_spec.outcomes,
+      deadline: response.market_spec.deadline,
+      category: response.market_spec.category,
+      resolutionSource: response.market_spec.resolution_source,
+      resolutionRule: response.market_spec.resolution_rule,
+      edgeCases: response.market_spec.edge_cases,
+    },
+    critic: {
+      objections: response.critic.objections,
+      ambiguityRisk: response.critic.ambiguity_risk,
+      suggestedFixes: response.critic.suggested_fixes,
+    },
+    judge: {
+      verdict: response.judge.verdict,
+      finalQuestion: response.judge.final_question,
+      finalResolutionRule: response.judge.final_resolution_rule,
+      reasoning: response.judge.reasoning,
+      confidence: response.judge.confidence,
+    },
+    scores: {
+      quality: response.scores.quality,
+      tradability: response.scores.tradability,
+      resolutionClarity: response.scores.resolution_clarity,
+      ambiguity: response.scores.ambiguity,
+    },
+    agentTrace: responseToTimeline(response),
+    status: response.judge.verdict,
+    createdBy: "api-forge",
+    createdAt: new Date().toISOString(),
+    arcPublished: false,
+    arcTxHash: null,
+    challengeCount: 0,
+    rewardTotal: 0,
+    requirementIds: [
+      "REQ-FORGE-004",
+      "REQ-FORGE-008",
+      "REQ-COURT-001",
+      "REQ-COURT-002",
+      "REQ-COURT-003",
+    ],
+  };
+}
+
+function recordToPreviewResponse(spec: MarketSpecRecord): ForgeResponse {
+  return {
+    source_claim: spec.sourceClaim,
+    canonical_claim: spec.canonicalClaim,
+    source_type: spec.sourceType,
+    market_spec: {
+      question: spec.marketSpec.question,
+      outcomes: ["YES", "NO"],
+      deadline: spec.marketSpec.deadline,
+      category: spec.marketSpec.category,
+      resolution_source: spec.marketSpec.resolutionSource,
+      resolution_rule: spec.marketSpec.resolutionRule,
+      edge_cases: spec.marketSpec.edgeCases,
+    },
+    critic: {
+      objections: spec.critic.objections,
+      ambiguity_risk: spec.critic.ambiguityRisk,
+      suggested_fixes: spec.critic.suggestedFixes,
+    },
+    judge: {
+      verdict:
+        spec.judge.verdict === "published" || spec.judge.verdict === "challenged"
+          ? "blessed"
+          : spec.judge.verdict,
+      final_question: spec.judge.finalQuestion,
+      final_resolution_rule: spec.judge.finalResolutionRule,
+      reasoning: spec.judge.reasoning,
+      confidence: spec.judge.confidence,
+    },
+    scores: {
+      quality: spec.scores.quality,
+      tradability: spec.scores.tradability,
+      resolution_clarity: spec.scores.resolutionClarity,
+      ambiguity: spec.scores.ambiguity,
+    },
+    agent_trace: {
+      forger: { ...(spec.agentTrace[0] ?? {}) },
+      critic: { ...(spec.agentTrace[1] ?? {}) },
+      judge: { ...(spec.agentTrace[2] ?? {}) },
+    },
+  };
+}
 
 export function ForgePage() {
   const [claim, setClaim] = useState(featuredSpec.sourceClaim);
   const [sourceType, setSourceType] = useState<SourceType>("manual");
   const [isForging, setIsForging] = useState(false);
   const [phaseIndex, setPhaseIndex] = useState(forgePhases.length - 1);
+  const [forgeResponse, setForgeResponse] = useState<ForgeResponse | null>(
+    null,
+  );
+  const [responseMode, setResponseMode] = useState<"live" | "demo" | null>(
+    null,
+  );
+  const [modeWarning, setModeWarning] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isForging) {
@@ -68,48 +267,112 @@ export function ForgePage() {
     }
 
     const interval = window.setInterval(() => {
-      setPhaseIndex((current) => {
-        if (current >= forgePhases.length - 1) {
-          window.clearInterval(interval);
-          setIsForging(false);
-          return current;
-        }
-
-        return current + 1;
-      });
-    }, 420);
+      setPhaseIndex((current) => Math.min(current + 1, 2));
+    }, 900);
 
     return () => window.clearInterval(interval);
   }, [isForging]);
 
-  const previewSpec = useMemo(
-    () => ({
+  const previewSpec = useMemo(() => {
+    if (forgeResponse) {
+      return responseToRecord(forgeResponse);
+    }
+
+    return {
       ...featuredSpec,
       sourceClaim: claim,
       sourceType,
-    }),
-    [claim, sourceType],
-  );
+    };
+  }, [claim, forgeResponse, sourceType]);
 
+  const jsonPreview = forgeResponse ?? recordToPreviewResponse(previewSpec);
   const activePhase = forgePhases[phaseIndex];
-  const progress = Math.round(((phaseIndex + 1) / forgePhases.length) * 100);
+
+  async function runForge() {
+    setIsForging(true);
+    setPhaseIndex(0);
+    setError(null);
+    setModeWarning(null);
+    setForgeResponse(null);
+    setResponseMode(null);
+
+    try {
+      const response = await fetch("/api/forge", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          claim,
+          sourceType,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          payload && typeof payload === "object" && "error" in payload
+            ? String(payload.error)
+            : "The AI Court request failed.";
+        throw new Error(message);
+      }
+
+      const parsed = ForgeResponseSchema.safeParse(payload);
+
+      if (!parsed.success) {
+        throw new Error("The API returned an invalid MarketSpec payload.");
+      }
+
+      setForgeResponse(parsed.data);
+      setResponseMode(
+        response.headers.get("x-vericlaim-mode") === "live" ? "live" : "demo",
+      );
+      setModeWarning(response.headers.get("x-vericlaim-warning"));
+      setPhaseIndex(3);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "The AI Court failed unexpectedly.",
+      );
+      setPhaseIndex(3);
+    } finally {
+      setIsForging(false);
+    }
+  }
+
+  function selectSampleClaim(nextClaim: string) {
+    setClaim(nextClaim);
+    setForgeResponse(null);
+    setResponseMode(null);
+    setModeWarning(null);
+    setError(null);
+    setPhaseIndex(forgePhases.length - 1);
+  }
 
   return (
     <main className="page-shell space-y-8">
       <section className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div className="max-w-3xl space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Badge variant="blue">REQ-FORGE-001</Badge>
-            <Badge variant="glass">Demo fallback mode</Badge>
+            <Badge variant="blue">REQ-FORGE-004</Badge>
+            <Badge variant={responseMode === "live" ? "success" : "glass"}>
+              {responseMode === "live"
+                ? "Live AI Court"
+                : responseMode === "demo"
+                  ? "Demo fallback validated"
+                  : "API ready"}
+            </Badge>
             <X402PaymentBadge state="disabled" />
           </div>
           <h1 className="font-display text-5xl leading-none sm:text-6xl">
             Forge a MarketSpec.
           </h1>
           <p className="text-muted-foreground">
-            Paste a messy claim, choose a source type, and preview the AI Court
-            flow with mock output. Live `/api/forge` streaming is reserved for
-            the implementation phase after this foundation.
+            Paste a messy claim, choose a source type, and run the AI Court.
+            Gemini forges, Groq critiques, and the Judge returns a validated
+            MarketSpec or deterministic demo fallback.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -119,7 +382,7 @@ export function ForgePage() {
           </Badge>
           <Badge variant="violet" className="gap-1.5">
             <BadgeCheck className="size-3.5" />
-            +2 rep per demo forge
+            +2 rep per forge
           </Badge>
         </div>
       </section>
@@ -138,8 +401,11 @@ export function ForgePage() {
                 id="claim"
                 value={claim}
                 maxLength={5000}
-                onChange={(event) => setClaim(event.target.value)}
-                placeholder="Paste a claim from Discord, news, a post, or a manual market idea."
+                onChange={(event) => {
+                  setClaim(event.target.value);
+                  setError(null);
+                }}
+                placeholder="Paste a claim from Discord, a tweet, article, GitHub signal, or a manual market idea."
                 className="min-h-44"
               />
               <div className="flex justify-between gap-3 font-mono text-xs text-muted-foreground">
@@ -160,7 +426,7 @@ export function ForgePage() {
                 <SelectContent>
                   {sourceTypes.map((type) => (
                     <SelectItem key={type} value={type}>
-                      {type}
+                      {sourceLabels[type]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -169,18 +435,29 @@ export function ForgePage() {
 
             <div className="space-y-3">
               <p className="text-sm font-medium">Sample claims</p>
-              <SampleClaimChips onSelect={setClaim} />
+              <SampleClaimChips onSelect={selectSampleClaim} />
             </div>
+
+            {error ? (
+              <div className="flex gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            ) : null}
+
+            {modeWarning ? (
+              <div className="flex gap-3 rounded-md border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <span>{modeWarning}</span>
+              </div>
+            ) : null}
 
             <Button
               type="button"
               variant="court"
               size="lg"
-              disabled={!claim.trim() || isForging}
-              onClick={() => {
-                setPhaseIndex(0);
-                setIsForging(true);
-              }}
+              disabled={!claim.trim() || claim.length > 5000 || isForging}
+              onClick={runForge}
               className="w-full"
             >
               {isForging ? (
@@ -191,7 +468,7 @@ export function ForgePage() {
               ) : (
                 <>
                   <Play />
-                  Run AI Court
+                  Generate MarketSpec
                 </>
               )}
             </Button>
@@ -209,7 +486,7 @@ export function ForgePage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <Progress value={progress} />
+              <Progress value={activePhase.progress} />
               <div className="flex items-center gap-3 rounded-md border border-border/70 bg-background/60 p-3">
                 <ArrowRight className="size-4 text-court-green" />
                 <span className="text-sm">{activePhase.label}</span>
@@ -224,16 +501,12 @@ export function ForgePage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <MarketSpecCard spec={previewSpec} compact />
             <JSONPreview
-              title="Validated mock response"
-              data={{
-                source_claim: previewSpec.sourceClaim,
-                source_type: previewSpec.sourceType,
-                market_spec: previewSpec.marketSpec,
-                critic: previewSpec.critic,
-                judge: previewSpec.judge,
-                scores: previewSpec.scores,
-                agent_trace: previewSpec.agentTrace,
-              }}
+              title={
+                forgeResponse
+                  ? "Validated API response"
+                  : "Validated preview shape"
+              }
+              data={jsonPreview}
             />
           </div>
         </div>

@@ -152,7 +152,7 @@ export const mockMarketSpecs: MarketSpecRecord[] = [
       "A top-5 L2 will announce native USDC settlement before Devconnect.",
     canonicalClaim:
       "At least one L2 ranked top five by total value locked will announce native USDC settlement before November 16, 2026.",
-    sourceType: "social",
+    sourceType: "tweet",
     marketSpec: {
       question:
         "Will at least one top-five L2 by total value locked announce native USDC settlement before November 16, 2026?",
@@ -241,7 +241,7 @@ export const mockMarketSpecs: MarketSpecRecord[] = [
       "The next CPI print will be under 3.0% year over year.",
     canonicalClaim:
       "The next U.S. CPI year-over-year headline inflation print published by BLS will be below 3.0%.",
-    sourceType: "news",
+    sourceType: "article",
     marketSpec: {
       question:
         "Will the next U.S. headline CPI year-over-year print published by BLS be below 3.0%?",

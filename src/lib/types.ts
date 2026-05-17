@@ -1,10 +1,10 @@
 export type SourceType =
   | "manual"
   | "discord"
-  | "news"
-  | "social"
-  | "rss"
-  | "research";
+  | "tweet"
+  | "article"
+  | "non_english"
+  | "github_signal";
 
 export type MarketSpecStatus =
   | "blessed"
