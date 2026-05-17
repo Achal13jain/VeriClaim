@@ -57,10 +57,14 @@
 
   html {
     scroll-behavior: auto;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   body {
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    max-width: 100%;
+    overflow-x: clip;
     font-feature-settings: "rlig" 1, "calt" 1;
     background-image:
       linear-gradient(to right, hsl(var(--border) / 0.28) 1px, transparent 1px),

@@ -52,8 +52,8 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
         </Link>
       </Button>
 
-      <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="space-y-5">
+      <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-5">
           <div className="flex flex-wrap gap-2">
             <Badge variant="blue">REQ-SPEC-001</Badge>
             <Badge variant={spec.status === "challenged" ? "warning" : "success"}>
@@ -90,7 +90,7 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
           </div>
         </div>
 
-        <Card className="glass-panel h-fit">
+        <Card className="glass-panel h-fit min-w-0">
           <CardHeader>
             <CardTitle>Proof summary</CardTitle>
           </CardHeader>
@@ -110,8 +110,8 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-6">
+      <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <div className="min-w-0 space-y-6">
           <Card className="glass-panel">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
           />
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card className="glass-panel">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
