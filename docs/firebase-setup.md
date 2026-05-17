@@ -22,6 +22,10 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 
 Restart `npm run dev` after changing env vars.
 
+Make sure `NEXT_PUBLIC_FIREBASE_PROJECT_ID` matches the project where Firestore
+rules are deployed. A mismatch commonly appears in the browser as `Missing or
+insufficient permissions`.
+
 ## 3. Auth
 
 Enable these sign-in providers:
@@ -62,6 +66,13 @@ firebase deploy --only firestore:rules
 ```
 
 The repo rule file is `firestore.rules`.
+
+If sign-in works but saving profiles or specs fails with permissions, deploy the
+rules again:
+
+```bash
+firebase deploy --only firestore:rules
+```
 
 Security baseline:
 

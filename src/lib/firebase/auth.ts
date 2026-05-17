@@ -12,6 +12,7 @@ import {
 
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/client";
 import {
+  createLocalUserProfile,
   ensureUserProfile,
   getUserProfile,
   type UserProfile,
@@ -22,6 +23,19 @@ export interface AuthState {
   loading: boolean;
   user: User | null;
   profile: UserProfile | null;
+}
+
+async function ensureProfileBestEffort(user: User) {
+  try {
+    return await ensureUserProfile(user);
+  } catch (error) {
+    console.warn(
+      "Firebase Auth succeeded, but Firestore blocked the user profile write. Falling back to a local profile until rules are deployed.",
+      error,
+    );
+
+    return createLocalUserProfile(user);
+  }
 }
 
 export function useAuthState(): AuthState {
@@ -56,7 +70,7 @@ export function useAuthState(): AuthState {
         return;
       }
 
-      const profile = await ensureUserProfile(user);
+      const profile = await ensureProfileBestEffort(user);
       setState({
         configured: true,
         loading: false,
@@ -77,7 +91,7 @@ export async function signInWithGoogle() {
   }
 
   const result = await signInWithPopup(auth, new GoogleAuthProvider());
-  await ensureUserProfile(result.user);
+  await ensureProfileBestEffort(result.user);
   return result.user;
 }
 
@@ -89,7 +103,7 @@ export async function signInWithDemoAccount() {
   }
 
   const result = await signInAnonymously(auth);
-  await ensureUserProfile(result.user);
+  await ensureProfileBestEffort(result.user);
   return result.user;
 }
 

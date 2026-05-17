@@ -54,6 +54,35 @@ export function firebaseReady() {
   return isFirebaseConfigured();
 }
 
+function isFirebasePermissionError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    String((error as { code?: unknown }).code) === "permission-denied"
+  );
+}
+
+function firestorePermissionMessage(action: string) {
+  return `Firestore denied ${action}. Deploy firestore.rules to the same Firebase project used by NEXT_PUBLIC_FIREBASE_PROJECT_ID, then restart the app.`;
+}
+
+export function createLocalUserProfile(user: User): UserProfile {
+  const timestamp = nowIso();
+
+  return {
+    uid: user.uid,
+    displayName: user.displayName ?? (user.isAnonymous ? "Demo user" : "VeriClaim user"),
+    email: user.email ?? "",
+    photoURL: user.photoURL ?? "",
+    credits: 100,
+    reputation: 0,
+    badges: [],
+    createdAt: timestamp,
+    lastActiveAt: timestamp,
+  };
+}
+
 export async function getUserProfile(uid: string) {
   if (!firebaseReady()) {
     return null;
@@ -86,17 +115,7 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
     };
   }
 
-  const profile: UserProfile = {
-    uid: user.uid,
-    displayName: user.displayName ?? (user.isAnonymous ? "Demo user" : "VeriClaim user"),
-    email: user.email ?? "",
-    photoURL: user.photoURL ?? "",
-    credits: 100,
-    reputation: 0,
-    badges: [],
-    createdAt: timestamp,
-    lastActiveAt: timestamp,
-  };
+  const profile = createLocalUserProfile(user);
 
   await setDoc(userRef, profile);
   return profile;
@@ -191,35 +210,44 @@ export async function saveMarketSpec(spec: MarketSpecRecord, user: User): Promis
   const db = requireDb();
   const hash = await hashMarketSpec(spec);
   const specRef = doc(db, "specs", hash);
-  const existing = await getDoc(specRef);
 
-  if (existing.exists()) {
+  try {
+    const existing = await getDoc(specRef);
+
+    if (existing.exists()) {
+      return {
+        hash,
+        spec: normalizeSpec(existing.data()),
+        alreadyExisted: true,
+        agentRunSaved: false,
+      };
+    }
+
+    const specToSave: MarketSpecRecord = {
+      ...spec,
+      hash,
+      createdBy: user.uid,
+      createdAt: nowIso(),
+      arcPublished: false,
+      arcTxHash: null,
+      challengeCount: spec.challengeCount ?? 0,
+      rewardTotal: spec.rewardTotal ?? 0,
+    };
+
+    await setDoc(specRef, specToSave);
+    const agentRunSaved = await saveAgentRunBestEffort(specToSave, user.uid);
+
     return {
       hash,
-      spec: normalizeSpec(existing.data()),
-      alreadyExisted: true,
-      agentRunSaved: false,
+      spec: specToSave,
+      alreadyExisted: false,
+      agentRunSaved,
     };
+  } catch (error) {
+    if (isFirebasePermissionError(error)) {
+      throw new Error(firestorePermissionMessage("saving this MarketSpec"));
+    }
+
+    throw error;
   }
-
-  const specToSave: MarketSpecRecord = {
-    ...spec,
-    hash,
-    createdBy: user.uid,
-    createdAt: nowIso(),
-    arcPublished: false,
-    arcTxHash: null,
-    challengeCount: spec.challengeCount ?? 0,
-    rewardTotal: spec.rewardTotal ?? 0,
-  };
-
-  await setDoc(specRef, specToSave);
-  const agentRunSaved = await saveAgentRunBestEffort(specToSave, user.uid);
-
-  return {
-    hash,
-    spec: specToSave,
-    alreadyExisted: false,
-    agentRunSaved,
-  };
 }
