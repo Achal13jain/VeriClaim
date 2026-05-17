@@ -390,13 +390,16 @@ export function ForgePage() {
 
     try {
       const result = await saveMarketSpec(previewSpec, user);
+      const rewardText = result.reputationAwarded
+        ? ` +${result.reputationAwarded} reputation awarded.`
+        : "";
       setSavedHash(result.hash);
       setSaveMessage(
         result.alreadyExisted
           ? "This MarketSpec already exists. Public page is ready."
           : result.agentRunSaved
-            ? "MarketSpec saved with agent run trace."
-            : "MarketSpec saved. Agent trace is embedded in the public spec.",
+            ? `MarketSpec saved with agent run trace.${rewardText}`
+            : `MarketSpec saved. Agent trace is embedded in the public spec.${rewardText}`,
       );
     } catch (caughtError) {
       setError(

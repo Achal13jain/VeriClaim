@@ -16,6 +16,7 @@ export function AuthButton() {
   const { configured, loading, user, profile } = useAuthState();
   const [busy, setBusy] = useState<"google" | "demo" | "out" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const avatarUrl = profile?.photoURL || user?.photoURL || "";
 
   async function run(action: "google" | "demo" | "out") {
     setBusy(action);
@@ -93,7 +94,15 @@ export function AuthButton() {
     <div className="flex items-center gap-2">
       <div className="hidden items-center gap-2 xl:flex">
         <Badge variant="glass" className="gap-1.5">
-          <UserRound className="size-3.5" />
+          {avatarUrl ? (
+            <span
+              aria-hidden="true"
+              className="size-4 rounded-full bg-cover bg-center"
+              style={{ backgroundImage: `url(${avatarUrl})` }}
+            />
+          ) : (
+            <UserRound className="size-3.5" />
+          )}
           {profile?.displayName || user.displayName || "User"}
         </Badge>
         <Badge variant="glass">{profile?.credits ?? 100} credits</Badge>

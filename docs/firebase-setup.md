@@ -65,7 +65,14 @@ firebase use <project-id>
 firebase deploy --only firestore:rules
 ```
 
-The repo rule file is `firestore.rules`.
+The repo rule file is `firestore.rules`. If your local Firebase CLI says it
+cannot find `firebase.json`, run `firebase init firestore` and choose the
+existing `firestore.rules` file, or keep a local `firebase.json` deploy helper.
+You can deploy without setting an active project by passing the project ID:
+
+```bash
+firebase deploy --project <project-id> --only firestore:rules
+```
 
 If sign-in works but saving profiles or specs fails with permissions, deploy the
 rules again:
@@ -84,11 +91,20 @@ Security baseline:
 
 ## 6. Admins
 
-To allow privileged writes in MVP tooling, create:
+Privileged writes are denied from the client in this MVP. Future server/Admin
+tooling can create:
 
 ```text
 admins/{uid}
 ```
 
-Only existing admins can read admin docs. Admin writes are disabled from the
-client; create admin docs through trusted console/server tooling.
+Only existing admins can read admin docs. Admin writes are disabled from the client.
+
+## 7. Known Limitations
+
+- Firebase Admin SDK is intentionally not used yet.
+- `agent_runs` writes are denied from the browser by security rules, so the
+  current client embeds the agent trace in `specs/{hash}` and attempts a
+  best-effort `agent_runs` write only if local rules allow it.
+- Arc proof publishing, payments, challenges, and agent registry writes remain
+  UI/demo-only until server-side services are added.

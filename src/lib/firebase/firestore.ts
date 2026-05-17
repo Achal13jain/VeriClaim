@@ -8,6 +8,7 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
   type DocumentData,
@@ -34,6 +35,7 @@ export interface SaveSpecResult {
   spec: MarketSpecRecord;
   alreadyExisted: boolean;
   agentRunSaved: boolean;
+  reputationAwarded: number;
 }
 
 function requireDb() {
@@ -48,6 +50,20 @@ function requireDb() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function profileFromUser(user: User, timestamp: string): UserProfile {
+  return {
+    uid: user.uid,
+    displayName: user.displayName ?? (user.isAnonymous ? "Demo user" : "VeriClaim user"),
+    email: user.email ?? "",
+    photoURL: user.photoURL ?? "",
+    credits: 100,
+    reputation: 0,
+    badges: [],
+    createdAt: timestamp,
+    lastActiveAt: timestamp,
+  };
 }
 
 export function firebaseReady() {
@@ -70,17 +86,7 @@ function firestorePermissionMessage(action: string) {
 export function createLocalUserProfile(user: User): UserProfile {
   const timestamp = nowIso();
 
-  return {
-    uid: user.uid,
-    displayName: user.displayName ?? (user.isAnonymous ? "Demo user" : "VeriClaim user"),
-    email: user.email ?? "",
-    photoURL: user.photoURL ?? "",
-    credits: 100,
-    reputation: 0,
-    badges: [],
-    createdAt: timestamp,
-    lastActiveAt: timestamp,
-  };
+  return profileFromUser(user, timestamp);
 }
 
 export async function getUserProfile(uid: string) {
@@ -115,10 +121,14 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
     };
   }
 
-  const profile = createLocalUserProfile(user);
+  const profile = profileFromUser(user, timestamp);
 
   await setDoc(userRef, profile);
   return profile;
+}
+
+function forgeReputationAward(spec: MarketSpecRecord) {
+  return 2 + (spec.judge.verdict === "blessed" || spec.status === "blessed" ? 15 : 0);
 }
 
 function normalizeTraceStep(step: unknown): AgentTraceStep {
@@ -210,37 +220,83 @@ export async function saveMarketSpec(spec: MarketSpecRecord, user: User): Promis
   const db = requireDb();
   const hash = await hashMarketSpec(spec);
   const specRef = doc(db, "specs", hash);
+  const userRef = doc(db, "users", user.uid);
 
   try {
-    const existing = await getDoc(specRef);
+    const result = await runTransaction(db, async (transaction) => {
+      const existing = await transaction.get(specRef);
+      const createdAt = nowIso();
+      const userSnapshot = await transaction.get(userRef);
+      const baseProfile = userSnapshot.exists()
+        ? {
+            ...profileFromUser(user, createdAt),
+            ...(userSnapshot.data() as Partial<UserProfile>),
+          }
+        : profileFromUser(user, createdAt);
 
-    if (existing.exists()) {
+      if (existing.exists()) {
+        transaction.set(
+          userRef,
+          {
+            ...baseProfile,
+            uid: user.uid,
+            lastActiveAt: createdAt,
+          },
+          { merge: true },
+        );
+
+        return {
+          hash,
+          spec: normalizeSpec(existing.data()),
+          alreadyExisted: true,
+          reputationAwarded: 0,
+        };
+      }
+
+      const specToSave: MarketSpecRecord = {
+        ...spec,
+        hash,
+        createdBy: user.uid,
+        createdAt,
+        arcPublished: false,
+        arcTxHash: null,
+        challengeCount: 0,
+        rewardTotal: 0,
+      };
+
+      const reputationAwarded = forgeReputationAward(specToSave);
+
+      transaction.set(specRef, specToSave);
+      transaction.set(
+        userRef,
+        {
+          ...baseProfile,
+          uid: user.uid,
+          displayName: baseProfile.displayName,
+          email: baseProfile.email,
+          photoURL: baseProfile.photoURL,
+          credits: Number(baseProfile.credits ?? 100),
+          reputation: Number(baseProfile.reputation ?? 0) + reputationAwarded,
+          badges: Array.isArray(baseProfile.badges) ? baseProfile.badges : [],
+          lastActiveAt: createdAt,
+        },
+        { merge: true },
+      );
+
       return {
         hash,
-        spec: normalizeSpec(existing.data()),
-        alreadyExisted: true,
-        agentRunSaved: false,
+        spec: specToSave,
+        alreadyExisted: false,
+        reputationAwarded,
       };
-    }
+    });
 
-    const specToSave: MarketSpecRecord = {
-      ...spec,
-      hash,
-      createdBy: user.uid,
-      createdAt: nowIso(),
-      arcPublished: false,
-      arcTxHash: null,
-      challengeCount: spec.challengeCount ?? 0,
-      rewardTotal: spec.rewardTotal ?? 0,
-    };
-
-    await setDoc(specRef, specToSave);
-    const agentRunSaved = await saveAgentRunBestEffort(specToSave, user.uid);
+    const agentRunSaved = result.alreadyExisted
+      ? false
+      : await saveAgentRunBestEffort(result.spec, user.uid);
 
     return {
-      hash,
-      spec: specToSave,
-      alreadyExisted: false,
+      ...result,
       agentRunSaved,
     };
   } catch (error) {

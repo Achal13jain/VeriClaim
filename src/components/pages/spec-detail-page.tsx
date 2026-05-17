@@ -7,6 +7,7 @@ import {
   Coins,
   Copy,
   FileCheck2,
+  Gavel,
   MessageSquareWarning,
   ShieldCheck,
 } from "lucide-react";
@@ -119,6 +120,28 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-md border border-border/70 bg-background/60 p-3">
+                  <p className="text-xs text-muted-foreground">Outcomes</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {spec.marketSpec.outcomes.map((outcome) => (
+                      <Badge key={outcome} variant="outline">
+                        {outcome}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border/70 bg-background/60 p-3">
+                  <p className="text-xs text-muted-foreground">Deadline</p>
+                  <p className="mt-2 font-mono text-sm">
+                    {spec.marketSpec.deadline}
+                  </p>
+                </div>
+                <div className="rounded-md border border-border/70 bg-background/60 p-3">
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <p className="mt-2 text-sm">{spec.marketSpec.category}</p>
+                </div>
+              </div>
               <div>
                 <p className="text-sm font-medium">Resolution source</p>
                 <p className="mt-2 text-muted-foreground">
@@ -190,6 +213,56 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
                     <span className="font-mono">{value}</span>
                   </div>
                   <Progress value={Number(value)} />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="glass-panel">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gavel className="size-5 text-court-violet" />
+                Judge verdict
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Badge variant="violet">{statusLabel(spec.judge.verdict)}</Badge>
+              <div>
+                <p className="text-sm font-medium">Final question</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {spec.judge.finalQuestion}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Reasoning</p>
+                <div className="mt-3 grid gap-2">
+                  {spec.judge.reasoning.map((reason) => (
+                    <div
+                      key={reason}
+                      className="rounded-md border border-border/70 bg-background/60 p-3 text-sm text-muted-foreground"
+                    >
+                      {reason}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-panel">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquareWarning className="size-5 text-court-amber" />
+                Critic objections
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {spec.critic.objections.map((objection) => (
+                <div
+                  key={objection}
+                  className="rounded-md border border-border/70 bg-background/60 p-3 text-sm text-muted-foreground"
+                >
+                  {objection}
                 </div>
               ))}
             </CardContent>

@@ -23,12 +23,14 @@ export function getFirebaseApp(): FirebaseApp | null {
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 
+export const firebaseApp = getFirebaseApp();
+export const auth: Auth | null = firebaseApp ? getAuth(firebaseApp) : null;
+export const db: Firestore | null = firebaseApp ? getFirestore(firebaseApp) : null;
+
 export function getFirebaseAuth(): Auth | null {
-  const app = getFirebaseApp();
-  return app ? getAuth(app) : null;
+  return auth;
 }
 
 export function getFirebaseDb(): Firestore | null {
-  const app = getFirebaseApp();
-  return app ? getFirestore(app) : null;
+  return db;
 }

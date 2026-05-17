@@ -16,13 +16,19 @@ const iconByType = {
   reward: Coins,
 };
 
-export function ActivityFeed({ events }: { events: ActivityEvent[] }) {
+export function ActivityFeed({
+  events,
+  badge = "live-style mock",
+}: {
+  events: ActivityEvent[];
+  badge?: string;
+}) {
   return (
     <Card className="glass-panel">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
           <CardTitle>Activity feed</CardTitle>
-          <Badge variant="glass">live-style mock</Badge>
+          <Badge variant="glass">{badge}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

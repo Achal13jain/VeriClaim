@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -25,13 +26,176 @@ import {
 } from "@/components/ui/card";
 import {
   activityEvents,
-  chartData,
-  dashboardMetrics,
   leaderboard,
 } from "@/lib/mock-data";
+import { firebaseReady, listPublicSpecs } from "@/lib/firebase/firestore";
+import type {
+  ActivityEvent,
+  ChartPoint,
+  DashboardMetric,
+  MarketSpecRecord,
+} from "@/lib/types";
 import { formatNumber } from "@/lib/utils";
 
+function isBlessedSpec(spec: MarketSpecRecord) {
+  return (
+    spec.status === "blessed" ||
+    spec.status === "published" ||
+    spec.judge.verdict === "blessed"
+  );
+}
+
+function buildMetrics(specs: MarketSpecRecord[], loading: boolean): DashboardMetric[] {
+  const totalSpecs = specs.length;
+  const blessedSpecs = specs.filter(isBlessedSpec).length;
+  const challengedSpecs = specs.filter(
+    (spec) => spec.status === "challenged" || spec.challengeCount > 0,
+  ).length;
+  const arcProofs = specs.filter((spec) => spec.arcPublished).length;
+
+  return [
+    {
+      label: "Total specs",
+      value: loading ? "..." : formatNumber(totalSpecs),
+      delta: firebaseReady() ? "from Firestore" : "Firebase not configured",
+      tone: "blue",
+    },
+    {
+      label: "Blessed specs",
+      value: loading ? "..." : formatNumber(blessedSpecs),
+      delta: `${totalSpecs ? Math.round((blessedSpecs / totalSpecs) * 100) : 0}% blessing rate`,
+      tone: "green",
+    },
+    {
+      label: "Challenged specs",
+      value: loading ? "..." : formatNumber(challengedSpecs),
+      delta: "challengeCount or challenged status",
+      tone: "amber",
+    },
+    {
+      label: "Arc proofs",
+      value: loading ? "..." : formatNumber(arcProofs),
+      delta: "published on Arc",
+      tone: "violet",
+    },
+  ];
+}
+
+function buildChartData(specs: MarketSpecRecord[]): ChartPoint[] {
+  const now = new Date();
+  const buckets = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (5 - index), 1));
+    const key = `${date.getUTCFullYear()}-${date.getUTCMonth()}`;
+
+    return {
+      key,
+      point: {
+        label: date.toLocaleString("en", { month: "short" }),
+        blessed: 0,
+        challenged: 0,
+        proofs: 0,
+      } satisfies ChartPoint,
+    };
+  });
+  const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket.point]));
+
+  specs.forEach((spec) => {
+    const date = new Date(spec.createdAt);
+
+    if (Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    const key = `${date.getUTCFullYear()}-${date.getUTCMonth()}`;
+    const point = bucketMap.get(key);
+
+    if (!point) {
+      return;
+    }
+
+    if (isBlessedSpec(spec)) {
+      point.blessed += 1;
+    }
+    if (spec.status === "challenged" || spec.challengeCount > 0) {
+      point.challenged += 1;
+    }
+    if (spec.arcPublished) {
+      point.proofs += 1;
+    }
+  });
+
+  return buckets.map((bucket) => bucket.point);
+}
+
+function buildRecentActivity(specs: MarketSpecRecord[]): ActivityEvent[] {
+  return specs.slice(0, 5).map((spec) => ({
+    id: spec.hash,
+    title: spec.arcPublished
+      ? "Arc proof published"
+      : spec.challengeCount > 0
+        ? "Spec challenged"
+        : "MarketSpec forged",
+    detail: spec.marketSpec.question,
+    timestamp: new Date(spec.createdAt).toLocaleDateString("en", {
+      month: "short",
+      day: "numeric",
+    }),
+    type: spec.arcPublished
+      ? "proof"
+      : spec.challengeCount > 0
+        ? "challenge"
+        : "forge",
+  }));
+}
+
 export function DashboardPage() {
+  const [specs, setSpecs] = useState<MarketSpecRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSpecs() {
+      setLoading(true);
+      setLoadError(null);
+
+      try {
+        const savedSpecs = await listPublicSpecs(100);
+
+        if (active) {
+          setSpecs(savedSpecs);
+        }
+      } catch (caughtError) {
+        if (active) {
+          setLoadError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load dashboard stats.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSpecs();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const metrics = useMemo(() => buildMetrics(specs, loading), [loading, specs]);
+  const chartData = useMemo(() => buildChartData(specs), [specs]);
+  const recentActivity = useMemo(() => buildRecentActivity(specs), [specs]);
+  const estimatedNetworkReputation = specs.reduce(
+    (total, spec) => total + (isBlessedSpec(spec) ? 17 : 2),
+    0,
+  );
+
   return (
     <main className="page-shell space-y-8">
       <section className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
@@ -39,21 +203,33 @@ export function DashboardPage() {
           <div className="flex flex-wrap gap-2">
             <Badge variant="blue">REQ-GAME-006</Badge>
             <Badge variant="success">REQ-GAME-007</Badge>
-            <Badge variant="glass">mock analytics</Badge>
+            <Badge variant="glass">
+              {firebaseReady() ? "Firestore analytics" : "Firebase not configured"}
+            </Badge>
           </div>
           <h1 className="font-display text-5xl leading-none sm:text-6xl">
             Dashboard.
           </h1>
           <p className="text-muted-foreground">
             Monitor MarketSpec quality, Arc proof activity, open challenges,
-            credits, badges, and reputation leaderboards without connecting live
-            services yet.
+            credits, badges, and reputation leaderboards from saved public specs.
           </p>
         </div>
-        <ReputationBadge reputation={2839} label="Network rep" />
+        <ReputationBadge
+          reputation={estimatedNetworkReputation || 0}
+          label="Network rep"
+        />
       </section>
 
-      <DashboardStats metrics={dashboardMetrics} />
+      {loadError ? (
+        <Card className="glass-panel">
+          <CardContent className="p-4 text-sm text-destructive">
+            {loadError}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <DashboardStats metrics={metrics} />
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="glass-panel">
@@ -97,7 +273,10 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <ActivityFeed events={activityEvents} />
+        <ActivityFeed
+          events={recentActivity.length ? recentActivity : activityEvents}
+          badge={recentActivity.length ? "Firestore recent" : "mock fallback"}
+        />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
