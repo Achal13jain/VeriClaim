@@ -94,3 +94,55 @@ export function getForgeModelConfig(): ForgeModelConfig {
     judge,
   };
 }
+
+export function getJudgeModelConfig(): ModelProviderConfig | null {
+  const openAiKey = readEnv("OPENAI_API_KEY");
+
+  if (openAiKey) {
+    return {
+      kind: "openai",
+      family: "openai",
+      role: "judge",
+      model: readEnv("OPENAI_MODEL") || "gpt-4o-mini",
+      apiKey: openAiKey,
+    };
+  }
+
+  const openRouterKey = readEnv("OPENROUTER_API_KEY");
+
+  if (openRouterKey) {
+    return {
+      kind: "openrouter",
+      family: "openrouter",
+      role: "judge",
+      model: readEnv("OPENROUTER_MODEL") || "openai/gpt-4o-mini",
+      apiKey: openRouterKey,
+    };
+  }
+
+  const groqKey = readEnv("GROQ_API_KEY");
+
+  if (groqKey) {
+    return {
+      kind: "groq",
+      family: "groq",
+      role: "judge",
+      model: readEnv("GROQ_MODEL") || "llama-3.1-8b-instant",
+      apiKey: groqKey,
+    };
+  }
+
+  const geminiKey = readEnv("GEMINI_API_KEY");
+
+  if (geminiKey) {
+    return {
+      kind: "gemini",
+      family: "gemini",
+      role: "judge",
+      model: readEnv("GEMINI_MODEL") || "gemini-2.5-flash",
+      apiKey: geminiKey,
+    };
+  }
+
+  return null;
+}

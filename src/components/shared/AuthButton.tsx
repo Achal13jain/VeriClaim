@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogIn, LogOut, UserRound, UserRoundPlus } from "lucide-react";
+import { Award, LogIn, LogOut, UserRound, UserRoundPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,15 @@ import {
   signOutUser,
   useAuthState,
 } from "@/lib/firebase/auth";
+import { getUserLevel } from "@/lib/gamification/rules";
 
 export function AuthButton() {
   const { configured, loading, user, profile } = useAuthState();
   const [busy, setBusy] = useState<"google" | "demo" | "out" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const avatarUrl = profile?.photoURL || user?.photoURL || "";
+  const reputation = profile?.reputation ?? 0;
+  const level = getUserLevel(reputation);
 
   async function run(action: "google" | "demo" | "out") {
     setBusy(action);
@@ -106,7 +109,16 @@ export function AuthButton() {
           {profile?.displayName || user.displayName || "User"}
         </Badge>
         <Badge variant="glass">{profile?.credits ?? 100} credits</Badge>
-        <Badge variant="success">{profile?.reputation ?? 0} rep</Badge>
+        <Badge variant="success">{reputation} rep</Badge>
+        <Badge variant="violet" className="gap-1.5">
+          <Award className="size-3.5" />
+          {level.title}
+        </Badge>
+        {profile?.badges.slice(0, 1).map((badge) => (
+          <Badge key={badge} variant="blue">
+            {badge}
+          </Badge>
+        ))}
       </div>
       <Button
         type="button"

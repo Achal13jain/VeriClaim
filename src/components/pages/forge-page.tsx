@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
   ArrowRight,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AgentCourtTimeline } from "@/components/vericlaim/agent-court-timeline";
+import { RewardToast } from "@/components/shared/RewardToast";
 import { JSONPreview } from "@/components/vericlaim/json-preview";
 import { MarketSpecCard } from "@/components/vericlaim/market-spec-card";
 import { SampleClaimChips } from "@/components/vericlaim/sample-claim-chips";
@@ -272,6 +274,11 @@ export function ForgePage() {
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedHash, setSavedHash] = useState<string | null>(null);
+  const [rewardToast, setRewardToast] = useState<{
+    creditsDelta: number;
+    reputationDelta: number;
+    badgesAwarded: string[];
+  } | null>(null);
 
   useEffect(() => {
     if (!isForging) {
@@ -390,8 +397,8 @@ export function ForgePage() {
 
     try {
       const result = await saveMarketSpec(previewSpec, user);
-      const rewardText = result.reputationAwarded
-        ? ` +${result.reputationAwarded} reputation awarded.`
+      const rewardText = result.reputationAwarded || result.creditAwarded
+        ? ` +${result.reputationAwarded} reputation, +${result.creditAwarded} credits.`
         : "";
       setSavedHash(result.hash);
       setSaveMessage(
@@ -401,6 +408,12 @@ export function ForgePage() {
             ? `MarketSpec saved with agent run trace.${rewardText}`
             : `MarketSpec saved. Agent trace is embedded in the public spec.${rewardText}`,
       );
+      setRewardToast({
+        creditsDelta: result.creditAwarded,
+        reputationDelta: result.reputationAwarded,
+        badgesAwarded: result.badgesAwarded,
+      });
+      window.setTimeout(() => setRewardToast(null), 3200);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -414,6 +427,16 @@ export function ForgePage() {
 
   return (
     <main className="page-shell space-y-8">
+      <AnimatePresence>
+        {rewardToast ? (
+          <RewardToast
+            creditsDelta={rewardToast.creditsDelta}
+            reputationDelta={rewardToast.reputationDelta}
+            badgesAwarded={rewardToast.badgesAwarded}
+            message="Forge reward"
+          />
+        ) : null}
+      </AnimatePresence>
       <section className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div className="max-w-3xl space-y-4">
           <div className="flex flex-wrap gap-2">

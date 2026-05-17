@@ -54,6 +54,17 @@ Create Firestore in production mode. The app uses these collections:
 - `feedback`
 - `admins`
 
+Gamification fields live on `users/{uid}`:
+
+- `credits`
+- `reputation`
+- `badges`
+- `stats`
+- `activityHistory`
+
+Challenge court documents live in `challenges/{id}` and public feed entries live
+in `activity_events/{id}`.
+
 ## 5. Deploy Rules
 
 Install Firebase CLI if needed:
@@ -87,6 +98,7 @@ Security baseline:
 - `specs` can be created only by signed-in users where `createdBy` matches their UID.
 - `users/{uid}` can be written only by that user.
 - `challenges` can be created only by signed-in users.
+- `activity_events` can be created only by the signed-in actor.
 - privileged collections are writable only by admins/server tooling.
 
 ## 6. Admins
@@ -106,5 +118,7 @@ Only existing admins can read admin docs. Admin writes are disabled from the cli
 - `agent_runs` writes are denied from the browser by security rules, so the
   current client embeds the agent trace in `specs/{hash}` and attempts a
   best-effort `agent_runs` write only if local rules allow it.
-- Arc proof publishing, payments, challenges, and agent registry writes remain
-  UI/demo-only until server-side services are added.
+- Challenge rewards are applied through the client transaction helper until an
+  Admin/API reward service is added.
+- Arc proof publishing, payments, and agent registry writes remain UI/demo-only
+  until server-side services are added.

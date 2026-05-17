@@ -15,6 +15,7 @@ import {
   createLocalUserProfile,
   ensureUserProfile,
   getUserProfile,
+  subscribeToUserProfile,
   type UserProfile,
 } from "@/lib/firebase/firestore";
 
@@ -48,6 +49,7 @@ export function useAuthState(): AuthState {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
+    let unsubscribeProfile: (() => void) | undefined;
 
     if (!auth) {
       setState({
@@ -59,7 +61,10 @@ export function useAuthState(): AuthState {
       return;
     }
 
-    return onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      unsubscribeProfile?.();
+      unsubscribeProfile = undefined;
+
       if (!user) {
         setState({
           configured: true,
@@ -77,7 +82,27 @@ export function useAuthState(): AuthState {
         user,
         profile,
       });
+
+      unsubscribeProfile = subscribeToUserProfile(
+        user.uid,
+        (nextProfile) => {
+          setState({
+            configured: true,
+            loading: false,
+            user,
+            profile: nextProfile ?? profile,
+          });
+        },
+        (error) => {
+          console.warn("Could not subscribe to user profile.", error);
+        },
+      );
     });
+
+    return () => {
+      unsubscribeProfile?.();
+      unsubscribeAuth();
+    };
   }, []);
 
   return state;

@@ -28,14 +28,20 @@ import {
   activityEvents,
   leaderboard,
 } from "@/lib/mock-data";
-import { firebaseReady, listPublicSpecs } from "@/lib/firebase/firestore";
+import {
+  firebaseReady,
+  listPublicSpecs,
+  listRecentActivityEvents,
+  listTopUsers,
+} from "@/lib/firebase/firestore";
 import type {
   ActivityEvent,
   ChartPoint,
   DashboardMetric,
+  LeaderboardUser,
   MarketSpecRecord,
 } from "@/lib/types";
-import { formatNumber } from "@/lib/utils";
+import { formatHash, formatNumber } from "@/lib/utils";
 
 function isBlessedSpec(spec: MarketSpecRecord) {
   return (
@@ -150,6 +156,8 @@ function buildRecentActivity(specs: MarketSpecRecord[]): ActivityEvent[] {
 
 export function DashboardPage() {
   const [specs, setSpecs] = useState<MarketSpecRecord[]>([]);
+  const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
+  const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -161,10 +169,16 @@ export function DashboardPage() {
       setLoadError(null);
 
       try {
-        const savedSpecs = await listPublicSpecs(100);
+        const [savedSpecs, savedUsers, savedEvents] = await Promise.all([
+          listPublicSpecs(100),
+          listTopUsers(10),
+          listRecentActivityEvents(8),
+        ]);
 
         if (active) {
           setSpecs(savedSpecs);
+          setTopUsers(savedUsers);
+          setEvents(savedEvents);
         }
       } catch (caughtError) {
         if (active) {
@@ -191,10 +205,30 @@ export function DashboardPage() {
   const metrics = useMemo(() => buildMetrics(specs, loading), [loading, specs]);
   const chartData = useMemo(() => buildChartData(specs), [specs]);
   const recentActivity = useMemo(() => buildRecentActivity(specs), [specs]);
+  const blessedSpecs = useMemo(
+    () =>
+      specs
+        .filter(isBlessedSpec)
+        .sort((a, b) => b.scores.quality - a.scores.quality)
+        .slice(0, 3),
+    [specs],
+  );
+  const challengedSpecs = useMemo(
+    () =>
+      [...specs]
+        .sort((a, b) => b.challengeCount - a.challengeCount)
+        .slice(0, 3),
+    [specs],
+  );
   const estimatedNetworkReputation = specs.reduce(
     (total, spec) => total + (isBlessedSpec(spec) ? 17 : 2),
     0,
   );
+  const displayedEvents = events.length
+    ? events
+    : recentActivity.length
+      ? recentActivity
+      : activityEvents;
 
   return (
     <main className="page-shell space-y-8">
@@ -274,8 +308,8 @@ export function DashboardPage() {
         </Card>
 
         <ActivityFeed
-          events={recentActivity.length ? recentActivity : activityEvents}
-          badge={recentActivity.length ? "Firestore recent" : "mock fallback"}
+          events={displayedEvents}
+          badge={events.length ? "Firestore activity" : "mock fallback"}
         />
       </section>
 
@@ -288,9 +322,22 @@ export function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {leaderboard.map((entry, index) => (
+            {(topUsers.length
+              ? topUsers
+              : leaderboard.map((entry, index) => ({
+                  uid: entry.name,
+                  displayName: entry.name,
+                  photoURL: "",
+                  credits: entry.credits,
+                  reputation: entry.reputation,
+                  level: entry.role,
+                  badges: [],
+                  blessedSpecs: Math.max(0, 5 - index),
+                  challenges: index + 1,
+                }))
+            ).map((entry, index) => (
               <div
-                key={entry.name}
+                key={entry.uid}
                 className="flex items-center justify-between gap-4 rounded-md border border-border/70 bg-background/60 p-3"
               >
                 <div className="flex min-w-0 items-center gap-3">
@@ -298,9 +345,9 @@ export function DashboardPage() {
                     {index + 1}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{entry.name}</p>
+                    <p className="truncate font-medium">{entry.displayName}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {entry.role}
+                      {entry.level}
                     </p>
                   </div>
                 </div>
@@ -312,6 +359,11 @@ export function DashboardPage() {
                 </div>
               </div>
             ))}
+            {!topUsers.length && !loading ? (
+              <p className="text-sm text-muted-foreground">
+                Save specs and challenges to populate the live leaderboard.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -323,7 +375,7 @@ export function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[320px]">
+            <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ left: -18, right: 12 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.18} />
@@ -341,6 +393,52 @@ export function DashboardPage() {
                   <Bar dataKey="proofs" fill="#9b7cff" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Most blessed specs</p>
+                {(blessedSpecs.length ? blessedSpecs : specs.slice(0, 3)).map(
+                  (spec) => (
+                    <div
+                      key={`blessed-${spec.hash}`}
+                      className="rounded-md border border-border/70 bg-background/60 p-3"
+                    >
+                      <p className="truncate text-sm font-medium">
+                        {spec.marketSpec.question}
+                      </p>
+                      <p className="mt-1 font-mono text-xs text-muted-foreground">
+                        {formatHash(spec.hash)} - quality {spec.scores.quality}
+                      </p>
+                    </div>
+                  ),
+                )}
+                {!specs.length && !loading ? (
+                  <p className="text-sm text-muted-foreground">
+                    No saved specs yet.
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Most challenged specs</p>
+                {challengedSpecs.map((spec) => (
+                  <div
+                    key={`challenged-${spec.hash}`}
+                    className="rounded-md border border-border/70 bg-background/60 p-3"
+                  >
+                    <p className="truncate text-sm font-medium">
+                      {spec.marketSpec.question}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      {formatHash(spec.hash)} - {spec.challengeCount} challenges
+                    </p>
+                  </div>
+                ))}
+                {!specs.length && !loading ? (
+                  <p className="text-sm text-muted-foreground">
+                    No challenged specs yet.
+                  </p>
+                ) : null}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Coins,
   Copy,
   FileCheck2,
   Gavel,
+  Loader2,
   MessageSquareWarning,
+  Send,
   ShieldCheck,
 } from "lucide-react";
 
@@ -16,6 +19,7 @@ import { AgentCourtTimeline } from "@/components/vericlaim/agent-court-timeline"
 import { ArcProofBadge } from "@/components/vericlaim/arc-proof-badge";
 import { JSONPreview } from "@/components/vericlaim/json-preview";
 import { QualityScoreBadge } from "@/components/vericlaim/quality-score-badge";
+import { RewardToast } from "@/components/shared/RewardToast";
 import { X402PaymentBadge } from "@/components/vericlaim/x402-payment-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,12 +30,54 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  ChallengeResponseSchema,
+  type ChallengeReasonCategory,
+  type ChallengeResponse,
+} from "@/lib/challenges/schemas";
+import { useAuthState } from "@/lib/firebase/auth";
+import {
+  firebaseReady,
+  saveChallengeCourtResult,
+} from "@/lib/firebase/firestore";
 import type { MarketSpecRecord } from "@/lib/types";
 import { formatHash, statusLabel } from "@/lib/utils";
 
-export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
+const challengeCategories: ChallengeReasonCategory[] = [
+  "Ambiguous wording",
+  "Weak deadline",
+  "Bad resolution source",
+  "Not binary",
+  "Too subjective",
+  "Missing edge case",
+  "Other",
+];
+
+export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }) {
+  const { configured, user } = useAuthState();
+  const [spec, setSpec] = useState(initialSpec);
   const [copied, setCopied] = useState(false);
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [reasonCategory, setReasonCategory] =
+    useState<ChallengeReasonCategory>("Ambiguous wording");
+  const [challengeReason, setChallengeReason] = useState("");
+  const [challengeResult, setChallengeResult] =
+    useState<ChallengeResponse | null>(null);
+  const [challengeError, setChallengeError] = useState<string | null>(null);
+  const [isChallenging, setIsChallenging] = useState(false);
+  const [rewardToast, setRewardToast] = useState<{
+    creditsDelta: number;
+    reputationDelta: number;
+    badgesAwarded: string[];
+  } | null>(null);
 
   async function copyShareLink() {
     if (typeof window === "undefined" || !navigator.clipboard) {
@@ -43,8 +89,94 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
     window.setTimeout(() => setCopied(false), 1400);
   }
 
+  async function submitChallenge() {
+    if (!configured || !firebaseReady()) {
+      setChallengeError("Firebase is not configured. Add env vars before challenging.");
+      return;
+    }
+
+    if (!user) {
+      setChallengeError("Sign in with Google or demo auth before challenging.");
+      return;
+    }
+
+    if (challengeReason.trim().length < 10) {
+      setChallengeError("Add a specific challenge reason with at least 10 characters.");
+      return;
+    }
+
+    setIsChallenging(true);
+    setChallengeError(null);
+    setChallengeResult(null);
+
+    try {
+      const response = await fetch("/api/challenge", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          specHash: spec.hash,
+          marketSpec: spec.marketSpec,
+          challengeReason,
+          reasonCategory,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          payload && typeof payload === "object" && "error" in payload
+            ? String(payload.error)
+            : "The Challenge Judge request failed.";
+        throw new Error(message);
+      }
+
+      const parsed = ChallengeResponseSchema.safeParse(payload);
+
+      if (!parsed.success) {
+        throw new Error("The Challenge Judge returned an invalid ruling.");
+      }
+
+      const saved = await saveChallengeCourtResult({
+        spec,
+        user,
+        challengeReason,
+        reasonCategory,
+        ruling: parsed.data,
+      });
+
+      setSpec(saved.updatedSpec);
+      setChallengeResult(parsed.data);
+      setRewardToast({
+        creditsDelta: saved.creditDelta,
+        reputationDelta: saved.reputationDelta,
+        badgesAwarded: saved.badgesAwarded,
+      });
+      window.setTimeout(() => setRewardToast(null), 3200);
+    } catch (caughtError) {
+      setChallengeError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not save this challenge.",
+      );
+    } finally {
+      setIsChallenging(false);
+    }
+  }
+
   return (
     <main className="page-shell space-y-8">
+      <AnimatePresence>
+        {rewardToast ? (
+          <RewardToast
+            creditsDelta={rewardToast.creditsDelta}
+            reputationDelta={rewardToast.reputationDelta}
+            badgesAwarded={rewardToast.badgesAwarded}
+            message="Challenge court reward"
+          />
+        ) : null}
+      </AnimatePresence>
       <Button asChild variant="ghost" className="px-0">
         <Link href="/specs">
           <ArrowLeft />
@@ -86,6 +218,14 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
             </Button>
             <Button asChild variant="outline">
               <Link href="/forge">Forge another</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setChallengeOpen(true)}
+            >
+              <MessageSquareWarning />
+              Challenge this spec
             </Button>
           </div>
         </div>
@@ -294,13 +434,114 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
                   </div>
                 </div>
               </div>
-              <Textarea
-                placeholder="Mock challenge reason, for example: deadline source is weak."
-                className="min-h-28"
-              />
-              <Button type="button" variant="outline" className="w-full">
-                Preview challenge ruling
-              </Button>
+              {challengeOpen ? (
+                <div className="space-y-3 rounded-md border border-border/70 bg-background/50 p-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Reason category</label>
+                    <Select
+                      value={reasonCategory}
+                      onValueChange={(value) =>
+                        setReasonCategory(value as ChallengeReasonCategory)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {challengeCategories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="challenge-reason" className="text-sm font-medium">
+                      Challenge reason
+                    </label>
+                    <Textarea
+                      id="challenge-reason"
+                      value={challengeReason}
+                      maxLength={2000}
+                      onChange={(event) => {
+                        setChallengeReason(event.target.value);
+                        setChallengeError(null);
+                      }}
+                      placeholder="Explain the exact ambiguity, source weakness, deadline issue, or missing edge case."
+                      className="min-h-28"
+                    />
+                    <div className="text-right font-mono text-xs text-muted-foreground">
+                      {challengeReason.length}/2000
+                    </div>
+                  </div>
+                  {challengeError ? (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                      {challengeError}
+                    </div>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="court"
+                    className="w-full"
+                    disabled={isChallenging}
+                    onClick={submitChallenge}
+                  >
+                    {isChallenging ? (
+                      <>
+                        <Loader2 className="animate-spin" />
+                        Judge reviewing
+                      </>
+                    ) : (
+                      <>
+                        <Send />
+                        Submit challenge
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ) : null}
+              {challengeResult ? (
+                <div className="space-y-3 rounded-md border border-emerald-400/30 bg-emerald-400/10 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="success">
+                      {statusLabel(challengeResult.ruling)}
+                    </Badge>
+                    <Badge variant="glass">
+                      {challengeResult.reputation_delta > 0 ? "+" : ""}
+                      {challengeResult.reputation_delta} rep
+                    </Badge>
+                    <Badge variant="blue">
+                      {challengeResult.credit_delta > 0 ? "+" : ""}
+                      {challengeResult.credit_delta} credits
+                    </Badge>
+                  </div>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {challengeResult.summary}
+                  </p>
+                  <div className="grid gap-2">
+                    {challengeResult.reasoning.map((reason) => (
+                      <div
+                        key={reason}
+                        className="rounded-md border border-border/70 bg-background/60 p-3 text-sm text-muted-foreground"
+                      >
+                        {reason}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {!challengeOpen ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setChallengeOpen(true)}
+                >
+                  <MessageSquareWarning />
+                  Challenge this spec
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
 

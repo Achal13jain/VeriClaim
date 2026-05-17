@@ -108,6 +108,18 @@ export interface ActivityEvent {
   type: "forge" | "challenge" | "proof" | "reward";
 }
 
+export interface LeaderboardUser {
+  uid: string;
+  displayName: string;
+  photoURL: string;
+  credits: number;
+  reputation: number;
+  level: string;
+  badges: string[];
+  blessedSpecs: number;
+  challenges: number;
+}
+
 export interface ChartPoint {
   label: string;
   blessed: number;
