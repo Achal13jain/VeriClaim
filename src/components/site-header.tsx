@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircuitBoard, Coins, ShieldCheck } from "lucide-react";
+import { CircuitBoard } from "lucide-react";
 
+import { AuthButton } from "@/components/shared/AuthButton";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -63,16 +63,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 lg:flex">
-            <Badge variant="glass" className="gap-1.5">
-              <Coins className="size-3.5" />
-              100 credits
-            </Badge>
-            <Badge variant="success" className="gap-1.5">
-              <ShieldCheck className="size-3.5" />
-              Demo safe
-            </Badge>
-          </div>
+          <AuthButton />
           <ThemeToggle />
           <Button asChild variant="court" size="sm" className="hidden sm:flex">
             <Link href="/forge">Forge</Link>

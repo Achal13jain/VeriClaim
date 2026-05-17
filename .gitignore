@@ -33,4 +33,5 @@ pnpm-debug.log*
 cache
 broadcast
 out
-/docs
+/docs/*
+!/docs/firebase-setup.md

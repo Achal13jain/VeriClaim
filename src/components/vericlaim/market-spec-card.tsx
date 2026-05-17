@@ -29,9 +29,11 @@ const statusVariant = {
 export function MarketSpecCard({
   spec,
   compact = false,
+  showOpen = true,
 }: {
   spec: MarketSpecRecord;
   compact?: boolean;
+  showOpen?: boolean;
 }) {
   return (
     <motion.div
@@ -91,12 +93,16 @@ export function MarketSpecCard({
           <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
             {formatHash(spec.hash)}
           </span>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/spec/${spec.hash}`}>
-              Open
-              <ArrowUpRight />
-            </Link>
-          </Button>
+          {showOpen ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/spec/${spec.hash}`}>
+                Open
+                <ArrowUpRight />
+              </Link>
+            </Button>
+          ) : (
+            <Badge variant="glass">Save to open</Badge>
+          )}
         </CardFooter>
       </Card>
     </motion.div>

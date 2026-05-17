@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Filter, ListFilter, SlidersHorizontal } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { FileSearch, Filter, ListFilter, Loader2, SlidersHorizontal } from "lucide-react";
 
 import { MarketSpecCard } from "@/components/vericlaim/market-spec-card";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { mockMarketSpecs } from "@/lib/mock-data";
-import type { MarketSpecStatus } from "@/lib/types";
+import { firebaseReady, listPublicSpecs } from "@/lib/firebase/firestore";
+import type { MarketSpecRecord, MarketSpecStatus } from "@/lib/types";
 
 type StatusFilter = "all" | MarketSpecStatus;
 type SortMode = "newest" | "quality" | "challenged" | "rewarded";
@@ -33,11 +33,6 @@ const statuses: StatusFilter[] = [
   "rejected",
 ];
 
-const categories = [
-  "all",
-  ...Array.from(new Set(mockMarketSpecs.map((spec) => spec.marketSpec.category))),
-];
-
 const sortModes: Array<{ value: SortMode; label: string }> = [
   { value: "newest", label: "Newest" },
   { value: "quality", label: "Quality score" },
@@ -49,9 +44,55 @@ export function SpecGalleryPage() {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [category, setCategory] = useState("all");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
+  const [allSpecs, setAllSpecs] = useState<MarketSpecRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSpecs() {
+      setLoading(true);
+      setLoadError(null);
+
+      try {
+        const specs = await listPublicSpecs();
+
+        if (active) {
+          setAllSpecs(specs);
+        }
+      } catch (caughtError) {
+        if (active) {
+          setLoadError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load public specs.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSpecs();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const categories = useMemo(
+    () => [
+      "all",
+      ...Array.from(new Set(allSpecs.map((spec) => spec.marketSpec.category))),
+    ],
+    [allSpecs],
+  );
 
   const specs = useMemo(() => {
-    const filtered = mockMarketSpecs.filter((spec) => {
+    const filtered = allSpecs.filter((spec) => {
       const statusMatch = status === "all" || spec.status === status;
       const categoryMatch =
         category === "all" || spec.marketSpec.category === category;
@@ -74,7 +115,7 @@ export function SpecGalleryPage() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     });
-  }, [category, sortMode, status]);
+  }, [allSpecs, category, sortMode, status]);
 
   return (
     <main className="page-shell space-y-8">
@@ -82,17 +123,22 @@ export function SpecGalleryPage() {
         <div className="max-w-3xl space-y-4">
           <div className="flex flex-wrap gap-2">
             <Badge variant="blue">REQ-GALLERY-001</Badge>
-            <Badge variant="glass">public mock specs</Badge>
+            <Badge variant="glass">
+              {firebaseReady() ? "Firestore public specs" : "Firebase not configured"}
+            </Badge>
           </div>
           <h1 className="font-display text-5xl leading-none sm:text-6xl">
             Spec gallery.
           </h1>
           <p className="text-muted-foreground">
             Browse public MarketSpecs by status, category, challenge activity,
-            quality, and rewards. The records are static mock data in this pass.
+            quality, and rewards. Saved specs are loaded from Firestore newest
+            first.
           </p>
         </div>
-        <Badge variant="success">{specs.length} specs visible</Badge>
+        <Badge variant="success">
+          {loading ? "Loading specs" : `${specs.length} specs visible`}
+        </Badge>
       </section>
 
       <Card className="glass-panel">
@@ -166,11 +212,39 @@ export function SpecGalleryPage() {
         </CardContent>
       </Card>
 
-      <section className="grid gap-5 lg:grid-cols-3">
-        {specs.map((spec) => (
-          <MarketSpecCard key={spec.hash} spec={spec} />
-        ))}
-      </section>
+      {loading ? (
+        <Card className="glass-panel">
+          <CardContent className="flex items-center gap-3 p-6 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Loading public MarketSpecs from Firestore.
+          </CardContent>
+        </Card>
+      ) : loadError ? (
+        <Card className="glass-panel">
+          <CardContent className="p-6 text-sm text-destructive">
+            {loadError}
+          </CardContent>
+        </Card>
+      ) : specs.length === 0 ? (
+        <Card className="glass-panel">
+          <CardContent className="flex flex-col items-start gap-3 p-6">
+            <FileSearch className="size-6 text-court-blue" />
+            <div>
+              <p className="font-semibold">No saved specs yet.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Forge and save a MarketSpec to make it appear in the public
+                gallery.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <section className="grid gap-5 lg:grid-cols-3">
+          {specs.map((spec) => (
+            <MarketSpecCard key={spec.hash} spec={spec} />
+          ))}
+        </section>
+      )}
     </main>
   );
 }

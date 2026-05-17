@@ -58,6 +58,9 @@ export function SpecDetailPage({ spec }: { spec: MarketSpecRecord }) {
             <Badge variant={spec.status === "challenged" ? "warning" : "success"}>
               {statusLabel(spec.status)}
             </Badge>
+            <Badge variant="warning">
+              Ambiguity {spec.critic.ambiguityRisk}
+            </Badge>
             <QualityScoreBadge score={spec.scores.quality} />
             <ArcProofBadge
               published={spec.arcPublished}

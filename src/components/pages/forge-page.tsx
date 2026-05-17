@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
   BadgeCheck,
   Coins,
+  ExternalLink,
   Loader2,
   Play,
+  Save,
 } from "lucide-react";
 
 import { AgentCourtTimeline } from "@/components/vericlaim/agent-court-timeline";
@@ -33,6 +36,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ForgeResponseSchema, type ForgeResponse } from "@/lib/agents/schemas";
+import { useAuthState } from "@/lib/firebase/auth";
+import { firebaseReady, saveMarketSpec } from "@/lib/firebase/firestore";
 import { featuredSpec } from "@/lib/mock-data";
 import type {
   AgentRole,
@@ -153,9 +158,12 @@ function responseToTimeline(response: ForgeResponse): AgentTraceStep[] {
   ];
 }
 
-function responseToRecord(response: ForgeResponse): MarketSpecRecord {
+function responseToRecord(
+  response: ForgeResponse,
+  hashOverride?: string | null,
+): MarketSpecRecord {
   return {
-    hash: makeDisplayHash(JSON.stringify(response)),
+    hash: hashOverride ?? makeDisplayHash(JSON.stringify(response)),
     sourceClaim: response.source_claim,
     canonicalClaim: response.canonical_claim,
     sourceType: response.source_type,
@@ -248,9 +256,11 @@ function recordToPreviewResponse(spec: MarketSpecRecord): ForgeResponse {
 }
 
 export function ForgePage() {
+  const { configured, user } = useAuthState();
   const [claim, setClaim] = useState(featuredSpec.sourceClaim);
   const [sourceType, setSourceType] = useState<SourceType>("manual");
   const [isForging, setIsForging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [phaseIndex, setPhaseIndex] = useState(forgePhases.length - 1);
   const [forgeResponse, setForgeResponse] = useState<ForgeResponse | null>(
     null,
@@ -260,6 +270,8 @@ export function ForgePage() {
   );
   const [modeWarning, setModeWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [savedHash, setSavedHash] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isForging) {
@@ -275,7 +287,7 @@ export function ForgePage() {
 
   const previewSpec = useMemo(() => {
     if (forgeResponse) {
-      return responseToRecord(forgeResponse);
+      return responseToRecord(forgeResponse, savedHash);
     }
 
     return {
@@ -283,7 +295,7 @@ export function ForgePage() {
       sourceClaim: claim,
       sourceType,
     };
-  }, [claim, forgeResponse, sourceType]);
+  }, [claim, forgeResponse, savedHash, sourceType]);
 
   const jsonPreview = forgeResponse ?? recordToPreviewResponse(previewSpec);
   const activePhase = forgePhases[phaseIndex];
@@ -295,6 +307,8 @@ export function ForgePage() {
     setModeWarning(null);
     setForgeResponse(null);
     setResponseMode(null);
+    setSaveMessage(null);
+    setSavedHash(null);
 
     try {
       const response = await fetch("/api/forge", {
@@ -329,6 +343,8 @@ export function ForgePage() {
         response.headers.get("x-vericlaim-mode") === "live" ? "live" : "demo",
       );
       setModeWarning(response.headers.get("x-vericlaim-warning"));
+      setSaveMessage(null);
+      setSavedHash(null);
       setPhaseIndex(3);
     } catch (caughtError) {
       setError(
@@ -348,7 +364,49 @@ export function ForgePage() {
     setResponseMode(null);
     setModeWarning(null);
     setError(null);
+    setSaveMessage(null);
+    setSavedHash(null);
     setPhaseIndex(forgePhases.length - 1);
+  }
+
+  async function saveGeneratedSpec() {
+    if (!forgeResponse) {
+      return;
+    }
+
+    if (!configured || !firebaseReady()) {
+      setError("Firebase is not configured. Add Firebase env vars before saving.");
+      return;
+    }
+
+    if (!user) {
+      setError("Sign in with Google or demo auth before saving a MarketSpec.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const result = await saveMarketSpec(previewSpec, user);
+      setSavedHash(result.hash);
+      setSaveMessage(
+        result.alreadyExisted
+          ? "This MarketSpec already exists. Public page is ready."
+          : result.agentRunSaved
+            ? "MarketSpec saved with agent run trace."
+            : "MarketSpec saved. Agent trace is embedded in the public spec.",
+      );
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not save MarketSpec.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -472,6 +530,52 @@ export function ForgePage() {
                 </>
               )}
             </Button>
+
+            {forgeResponse ? (
+              <div className="space-y-3 rounded-lg border border-border/70 bg-background/55 p-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isSaving || !user || !configured}
+                  onClick={saveGeneratedSpec}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="animate-spin" />
+                      Saving MarketSpec
+                    </>
+                  ) : (
+                    <>
+                      <Save />
+                      Save MarketSpec
+                    </>
+                  )}
+                </Button>
+                {!user ? (
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Sign in from the header with Google or demo auth to save.
+                  </p>
+                ) : null}
+                {saveMessage ? (
+                  <div className="rounded-md border border-emerald-400/30 bg-emerald-400/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                    {saveMessage}
+                    {savedHash ? (
+                      <Button
+                        asChild
+                        variant="link"
+                        className="ml-2 h-auto p-0 text-emerald-700 dark:text-emerald-300"
+                      >
+                        <Link href={`/spec/${savedHash}`}>
+                          Open public page
+                          <ExternalLink />
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -499,7 +603,11 @@ export function ForgePage() {
           </Card>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <MarketSpecCard spec={previewSpec} compact />
+            <MarketSpecCard
+              spec={previewSpec}
+              compact
+              showOpen={Boolean(savedHash)}
+            />
             <JSONPreview
               title={
                 forgeResponse
