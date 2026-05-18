@@ -6,6 +6,15 @@ const outputFileTracingRoot = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot,
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@react-native-async-storage/async-storage": false,
+      "pino-pretty": false,
+    };
+
+    return config;
+  },
   async headers() {
     return [
       {

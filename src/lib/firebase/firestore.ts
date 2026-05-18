@@ -21,6 +21,7 @@ import type {
   ChallengeResponse,
 } from "@/lib/challenges/schemas";
 import {
+  calculateArcProofReward,
   calculateChallengeReward,
   calculateForgeReward,
   defaultUserStats,
@@ -76,6 +77,14 @@ export interface SaveChallengeResult {
   creditDelta: number;
   reputationDelta: number;
   badgesAwarded: string[];
+}
+
+export interface PublishArcProofResult {
+  updatedSpec: MarketSpecRecord;
+  reputationAwarded: number;
+  creditAwarded: number;
+  badgesAwarded: string[];
+  alreadyPublished: boolean;
 }
 
 function requireDb() {
@@ -543,6 +552,143 @@ export async function saveChallengeCourtResult({
   } catch (error) {
     if (isFirebasePermissionError(error)) {
       throw new Error(firestorePermissionMessage("saving this challenge"));
+    }
+
+    throw error;
+  }
+}
+
+export async function publishArcProofResult({
+  spec,
+  user,
+  txHash,
+  chainId,
+  contractAddress,
+}: {
+  spec: MarketSpecRecord;
+  user: User;
+  txHash: string;
+  chainId: number;
+  contractAddress: string;
+}): Promise<PublishArcProofResult> {
+  const db = requireDb();
+  const specRef = doc(db, "specs", spec.hash);
+  const userRef = doc(db, "users", user.uid);
+  const proofRef = doc(collection(db, "arc_proofs"));
+  const activityRef = doc(collection(db, "activity_events"));
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const specSnapshot = await transaction.get(specRef);
+
+      if (!specSnapshot.exists()) {
+        throw new Error("Save this MarketSpec before publishing an Arc proof.");
+      }
+
+      const userSnapshot = await transaction.get(userRef);
+      const createdAt = nowIso();
+      const currentSpec = normalizeSpec(specSnapshot.data());
+      const updatedSpec: MarketSpecRecord = {
+        ...currentSpec,
+        status: "published",
+        arcPublished: true,
+        arcTxHash: currentSpec.arcPublished ? currentSpec.arcTxHash : txHash,
+      };
+      const baseProfile = userSnapshot.exists()
+        ? normalizeUserProfile(userSnapshot.data())
+        : profileFromUser(user, createdAt);
+
+      if (currentSpec.arcPublished) {
+        transaction.set(
+          userRef,
+          {
+            ...baseProfile,
+            uid: user.uid,
+            lastActiveAt: createdAt,
+          },
+          { merge: true },
+        );
+
+        return {
+          updatedSpec,
+          reputationAwarded: 0,
+          creditAwarded: 0,
+          badgesAwarded: [],
+          alreadyPublished: true,
+        };
+      }
+
+      const reward = calculateArcProofReward();
+      const nextStats = {
+        ...baseProfile.stats,
+        arcProofs: baseProfile.stats.arcProofs + 1,
+      };
+      const nextBadges = mergeBadges(baseProfile.badges, nextStats);
+      const badgesAwarded = nextBadges.filter(
+        (badge) => !baseProfile.badges.includes(badge),
+      );
+      const activity = profileActivity(
+        "proof",
+        "Arc proof published",
+        currentSpec.marketSpec.question,
+        reward.creditsDelta,
+        reward.reputationDelta,
+        createdAt,
+      );
+
+      transaction.update(specRef, {
+        status: "published",
+        arcPublished: true,
+        arcTxHash: txHash,
+      });
+      transaction.set(proofRef, {
+        specHash: spec.hash,
+        chainId,
+        contractAddress,
+        txHash,
+        publishedBy: user.uid,
+        createdAt,
+      });
+      transaction.set(
+        userRef,
+        {
+          ...baseProfile,
+          uid: user.uid,
+          reputation: Math.max(
+            0,
+            baseProfile.reputation + reward.reputationDelta,
+          ),
+          credits: Math.max(0, baseProfile.credits + reward.creditsDelta),
+          badges: nextBadges,
+          stats: nextStats,
+          activityHistory: updateProfileActivity(baseProfile, activity),
+          lastActiveAt: createdAt,
+        },
+        { merge: true },
+      );
+      transaction.set(activityRef, {
+        actorUid: user.uid,
+        specHash: spec.hash,
+        type: "proof",
+        title: "Arc proof published",
+        detail: currentSpec.marketSpec.question,
+        creditDelta: reward.creditsDelta,
+        reputationDelta: reward.reputationDelta,
+        txHash,
+        createdAt,
+      });
+
+      return {
+        updatedSpec,
+        reputationAwarded: reward.reputationDelta,
+        creditAwarded: reward.creditsDelta,
+        badgesAwarded,
+        alreadyPublished: false,
+      };
+    });
+  } catch (error) {
+    if (isFirebasePermissionError(error)) {
+      throw new Error(firestorePermissionMessage("saving this Arc proof"));
     }
 
     throw error;

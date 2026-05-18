@@ -35,3 +35,4 @@ broadcast
 out
 /docs/*
 !/docs/firebase-setup.md
+!/docs/arc-integration.md

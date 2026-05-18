@@ -58,6 +58,13 @@ export function calculateChallengeReward(ruling: ChallengeRuling): RewardDelta {
   };
 }
 
+export function calculateArcProofReward(): RewardDelta {
+  return {
+    creditsDelta: 0,
+    reputationDelta: 20,
+  };
+}
+
 export function getUserLevel(reputation: number): UserLevel {
   if (reputation >= 600) {
     return { title: "Spec Master", min: 600, max: null };

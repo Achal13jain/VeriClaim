@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { CircuitBoard } from "lucide-react";
 
 import { AuthButton } from "@/components/shared/AuthButton";
+import { WalletButton } from "@/components/shared/WalletButton";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <AuthButton />
+          <WalletButton />
           <ThemeToggle />
           <Button asChild variant="court" size="sm" className="hidden sm:flex">
             <Link href="/forge">Forge</Link>

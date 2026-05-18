@@ -17,10 +17,11 @@ import {
 
 import { AgentCourtTimeline } from "@/components/vericlaim/agent-court-timeline";
 import { ArcProofBadge } from "@/components/vericlaim/arc-proof-badge";
+import { ArcProofPanel } from "@/components/spec/ArcProofPanel";
 import { JSONPreview } from "@/components/vericlaim/json-preview";
+import { PublishProofButton } from "@/components/spec/PublishProofButton";
 import { QualityScoreBadge } from "@/components/vericlaim/quality-score-badge";
 import { RewardToast } from "@/components/shared/RewardToast";
-import { X402PaymentBadge } from "@/components/vericlaim/x402-payment-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,6 +78,7 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
     creditsDelta: number;
     reputationDelta: number;
     badgesAwarded: string[];
+    message: string;
   } | null>(null);
 
   async function copyShareLink() {
@@ -152,6 +154,7 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
         creditsDelta: saved.creditDelta,
         reputationDelta: saved.reputationDelta,
         badgesAwarded: saved.badgesAwarded,
+        message: "Challenge court reward",
       });
       window.setTimeout(() => setRewardToast(null), 3200);
     } catch (caughtError) {
@@ -173,7 +176,7 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
             creditsDelta={rewardToast.creditsDelta}
             reputationDelta={rewardToast.reputationDelta}
             badgesAwarded={rewardToast.badgesAwarded}
-            message="Challenge court reward"
+            message={rewardToast.message}
           />
         ) : null}
       </AnimatePresence>
@@ -230,24 +233,24 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
           </div>
         </div>
 
-        <Card className="glass-panel h-fit min-w-0">
-          <CardHeader>
-            <CardTitle>Proof summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-md border border-border/70 bg-background/60 p-3">
-              <div className="text-sm text-muted-foreground">Hash</div>
-              <div className="mt-1 break-all font-mono text-xs">{spec.hash}</div>
-            </div>
-            <div className="rounded-md border border-border/70 bg-background/60 p-3">
-              <div className="text-sm text-muted-foreground">Arc tx</div>
-              <div className="mt-1 break-all font-mono text-xs">
-                {spec.arcTxHash ?? "pending"}
-              </div>
-            </div>
-            <X402PaymentBadge />
-          </CardContent>
-        </Card>
+        <div className="min-w-0 space-y-4">
+          <ArcProofPanel spec={spec} />
+          <Card className="glass-panel">
+            <CardHeader>
+              <CardTitle>Publish proof</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PublishProofButton
+                spec={spec}
+                onPublished={setSpec}
+                onReward={(reward) => {
+                  setRewardToast(reward);
+                  window.setTimeout(() => setRewardToast(null), 3200);
+                }}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">

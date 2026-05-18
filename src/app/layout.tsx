@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AppWagmiProvider } from "@/components/providers/wagmi-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SmoothScrollProvider } from "@/components/providers/smooth-scroll-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -25,10 +26,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SmoothScrollProvider>
-            <SiteHeader />
-            {children}
-          </SmoothScrollProvider>
+          <AppWagmiProvider>
+            <SmoothScrollProvider>
+              <SiteHeader />
+              {children}
+            </SmoothScrollProvider>
+          </AppWagmiProvider>
         </ThemeProvider>
       </body>
     </html>
