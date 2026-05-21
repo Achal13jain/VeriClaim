@@ -82,6 +82,7 @@ export function MarketSpecCard({
             <ArcProofBadge
               published={spec.arcPublished}
               txHash={spec.arcTxHash}
+              mode={spec.arcMode}
             />
             <Badge variant="glass" className="gap-1.5">
               <Coins className="size-3.5" />

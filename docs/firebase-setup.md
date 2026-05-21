@@ -98,6 +98,8 @@ Security baseline:
 - `specs` can be created only by signed-in users where `createdBy` matches their UID.
 - `users/{uid}` can be written only by that user.
 - `challenges` can be created only by signed-in users.
+- `arc_proofs` can be created only by the signed-in publisher and must target
+  Arc Testnet with `mode: "mock"` or `mode: "contract"`.
 - `activity_events` can be created only by the signed-in actor.
 - privileged collections are writable only by admins/server tooling.
 
@@ -120,5 +122,6 @@ Only existing admins can read admin docs. Admin writes are disabled from the cli
   best-effort `agent_runs` write only if local rules allow it.
 - Challenge rewards are applied through the client transaction helper until an
   Admin/API reward service is added.
-- Arc proof publishing, payments, and agent registry writes remain UI/demo-only
-  until server-side services are added.
+- Arc proof publishing currently uses the mock MVP proof flow; payments and
+  agent registry writes remain UI/demo-only until server-side services are
+  added.

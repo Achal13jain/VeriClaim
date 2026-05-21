@@ -1,25 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Cable, Loader2, ShieldCheck, Wallet } from "lucide-react";
-import {
-  useAccount,
-  useChainId,
-  useSwitchChain,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-} from "wagmi";
+import { useState } from "react";
+import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { arcTestnet } from "@/lib/arc/chains";
-import {
-  VERICLAIM_REGISTRY_ABI,
-  VERICLAIM_REGISTRY_ADDRESS,
-  isArcContractConfigured,
-} from "@/lib/arc/contract";
-import { metadataUriForSpec, toBytes32Hash } from "@/lib/arc/hash";
+import { createMockArcProof } from "@/lib/arc/mockProof";
 import { useAuthState } from "@/lib/firebase/auth";
-import { publishArcProofResult } from "@/lib/firebase/firestore";
+import {
+  firebaseReady,
+  publishMockArcProofResult,
+} from "@/lib/firebase/firestore";
 import type { MarketSpecRecord } from "@/lib/types";
 
 export function PublishProofButton({
@@ -37,125 +27,48 @@ export function PublishProofButton({
   }) => void;
 }) {
   const { configured, user } = useAuthState();
-  const chainId = useChainId();
-  const { isConnected } = useAccount();
-  const { switchChain, isPending: switching } = useSwitchChain();
-  const { data: txHash, error: writeError, isPending, writeContract } =
-    useWriteContract();
-  const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedTxHash, setSavedTxHash] = useState<string | null>(null);
-  const contractConfigured = isArcContractConfigured();
-  const wrongNetwork = isConnected && chainId !== arcTestnet.id;
-  const disabledReason = useMemo(() => {
-    if (spec.arcPublished) {
-      return "Arc proof already published.";
-    }
-    if (!contractConfigured) {
-      return "Contract address missing. Set NEXT_PUBLIC_VERICLAIM_CONTRACT_ADDRESS.";
-    }
-    if (!configured || !user) {
-      return "Sign in before publishing a proof.";
-    }
-    if (!isConnected) {
-      return "Connect a wallet before publishing.";
-    }
-    if (wrongNetwork) {
-      return "Switch wallet to Arc Testnet.";
-    }
+  const disabledReason =
+    !configured || !firebaseReady()
+      ? "Firebase is not configured. Add env vars before publishing."
+      : !user
+        ? "Sign in before publishing a mock Arc proof."
+        : "";
 
-    return "";
-  }, [configured, contractConfigured, isConnected, spec.arcPublished, user, wrongNetwork]);
-
-  useEffect(() => {
-    if (!writeError) {
+  async function publish() {
+    if (disabledReason || !user) {
+      setError(disabledReason || "Sign in before publishing a mock Arc proof.");
       return;
     }
 
-    setError(writeError.message);
-  }, [writeError]);
-
-  useEffect(() => {
-    if (!isSuccess || !txHash || savedTxHash === txHash || !user) {
-      return;
-    }
-
-    let active = true;
-    const confirmedHash = txHash;
-    const signedInUser = user;
-
-    async function saveProof() {
-      try {
-        const result = await publishArcProofResult({
-          spec,
-          user: signedInUser,
-          txHash: confirmedHash,
-          chainId: arcTestnet.id,
-          contractAddress: VERICLAIM_REGISTRY_ADDRESS,
-        });
-
-        if (!active) {
-          return;
-        }
-
-        setSavedTxHash(confirmedHash);
-        onPublished(result.updatedSpec);
-        onReward({
-          creditsDelta: result.creditAwarded,
-          reputationDelta: result.reputationAwarded,
-          badgesAwarded: result.badgesAwarded,
-          message: result.alreadyPublished
-            ? "Arc proof already saved"
-            : "Arc proof reward",
-        });
-      } catch (caughtError) {
-        if (active) {
-          setError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Could not save Arc proof.",
-          );
-        }
-      }
-    }
-
-    saveProof();
-
-    return () => {
-      active = false;
-    };
-  }, [isSuccess, onPublished, onReward, savedTxHash, spec, txHash, user]);
-
-  function publish() {
+    setPublishing(true);
     setError(null);
 
-    if (wrongNetwork) {
-      switchChain({ chainId: arcTestnet.id });
-      return;
-    }
-
     try {
-      writeContract({
-        address: VERICLAIM_REGISTRY_ADDRESS as `0x${string}`,
-        abi: VERICLAIM_REGISTRY_ABI,
-        functionName: "publishSpec",
-        args: [
-          toBytes32Hash(spec.hash),
-          metadataUriForSpec(spec.hash),
-          BigInt(1),
-          BigInt(2),
-          BigInt(3),
-        ],
-        chainId: arcTestnet.id,
+      const proof = createMockArcProof({
+        specHash: spec.hash,
+        publishedBy: user.uid,
+      });
+      const result = await publishMockArcProofResult({ spec, user, proof });
+
+      onPublished(result.updatedSpec);
+      onReward({
+        creditsDelta: result.creditAwarded,
+        reputationDelta: result.reputationAwarded,
+        badgesAwarded: result.badgesAwarded,
+        message: result.alreadyPublished
+          ? "Arc proof already saved"
+          : "Mock Arc proof reward",
       });
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not prepare Arc transaction.",
+          : "Could not publish this mock Arc proof.",
       );
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -174,28 +87,27 @@ export function PublishProofButton({
         type="button"
         variant="court"
         className="w-full"
-        disabled={Boolean(disabledReason) && !wrongNetwork}
+        disabled={publishing}
         onClick={publish}
       >
-        {isPending || confirming || switching ? (
+        {publishing ? (
           <>
             <Loader2 className="animate-spin" />
-            {confirming ? "Confirming proof" : switching ? "Switching network" : "Publishing proof"}
-          </>
-        ) : wrongNetwork ? (
-          <>
-            <Cable />
-            Switch to Arc Testnet
+            Publishing proof to Arc...
           </>
         ) : (
           <>
-            <Wallet />
+            <Sparkles />
             Publish Proof on Arc
           </>
         )}
       </Button>
-      {disabledReason && !wrongNetwork ? (
-        <p className="text-xs leading-5 text-muted-foreground">{disabledReason}</p>
+      <p className="text-xs leading-5 text-muted-foreground">
+        MVP mode creates a mock Arc Testnet proof in Firestore. Real contract
+        publishing can plug into this same flow later.
+      </p>
+      {disabledReason ? (
+        <p className="text-xs leading-5 text-court-amber">{disabledReason}</p>
       ) : null}
       {error ? (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

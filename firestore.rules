@@ -38,9 +38,17 @@ service cloud.firestore {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return signedIn()
         && request.resource.data.createdBy == resource.data.createdBy
-        && changed.hasOnly(["status", "arcPublished", "arcTxHash"])
+        && changed.hasOnly([
+          "status",
+          "arcPublished",
+          "arcTxHash",
+          "arcPublishedAt",
+          "arcMode"
+        ])
         && request.resource.data.arcPublished == true
         && request.resource.data.arcTxHash is string
+        && request.resource.data.arcPublishedAt is string
+        && request.resource.data.arcMode in ["mock", "contract"]
         && request.resource.data.status == "published";
     }
 
@@ -83,7 +91,12 @@ service cloud.firestore {
     match /arc_proofs/{id} {
       allow read: if true;
       allow create: if signedIn()
-        && request.resource.data.publishedBy == request.auth.uid;
+        && request.resource.data.publishedBy == request.auth.uid
+        && request.resource.data.specHash is string
+        && request.resource.data.chainId == 5042002
+        && request.resource.data.chainName == "Arc Testnet"
+        && request.resource.data.txHash is string
+        && request.resource.data.mode in ["mock", "contract"];
       allow update, delete: if isAdmin();
     }
 

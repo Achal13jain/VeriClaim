@@ -201,6 +201,7 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
             <ArcProofBadge
               published={spec.arcPublished}
               txHash={spec.arcTxHash}
+              mode={spec.arcMode}
             />
           </div>
           <h1 className="max-w-5xl font-display text-5xl leading-none sm:text-6xl">
@@ -211,8 +212,8 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
             <span className="font-mono text-foreground">
               {formatHash(spec.hash)}
             </span>
-            . Only hashes and metadata references are designed to be anchored on
-            Arc in later phases.
+            . The MVP saves a clearly labeled mock Arc Testnet proof while the
+            real contract path remains deferred.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button type="button" variant="court" onClick={copyShareLink}>
@@ -331,6 +332,12 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
               critic: spec.critic,
               judge: spec.judge,
               scores: spec.scores,
+              arc: {
+                published: spec.arcPublished,
+                mode: spec.arcMode,
+                txHash: spec.arcTxHash,
+                publishedAt: spec.arcPublishedAt,
+              },
             }}
           />
         </div>

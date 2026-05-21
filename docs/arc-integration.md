@@ -1,8 +1,33 @@
 # Arc Integration
 
-VeriClaim publishes saved MarketSpec hashes to Arc Testnet through the
-`VeriClaimRegistry` contract. The app stores only proof metadata in Firestore
-after the wallet transaction succeeds.
+VeriClaim's current MVP uses a clearly labeled mock Arc Testnet proof flow. This
+keeps the demo complete without requiring Foundry, Forge, a deployed contract,
+or a wallet transaction during early review.
+
+## Current MVP Mode
+
+On a saved `/spec/[hash]` page, an authenticated user can click **Publish Proof
+on Arc**. The app then:
+
+1. Generates a realistic mock transaction hash beginning with `0x`.
+2. Updates `specs/{hash}` with:
+   - `arcPublished: true`
+   - `arcTxHash`
+   - `arcPublishedAt`
+   - `arcMode: "mock"`
+3. Creates an `arc_proofs` document with:
+   - `specHash`
+   - `chainId: 5042002`
+   - `chainName: "Arc Testnet"`
+   - `txHash`
+   - `mode: "mock"`
+   - `publishedBy`
+   - `createdAt`
+4. Awards `+20` reputation and the `First Arc Proof` badge when applicable.
+5. Shows the proof as **Mock Testnet Proof** in the Arc proof panel.
+
+The UI must not present this as a real on-chain transaction. It is an MVP proof
+record that matches the intended Firestore schema and final user experience.
 
 ## Arc Testnet
 
@@ -10,7 +35,24 @@ after the wallet transaction succeeds.
 - Native currency: `USDC`
 - Explorer: `https://testnet.arcscan.app`
 
-## Contract Setup
+## Frontend Environment
+
+The mock flow does not require a contract address. These variables remain for
+the future real integration path:
+
+```bash
+NEXT_PUBLIC_ARC_CHAIN_ID=5042002
+NEXT_PUBLIC_ARC_RPC_URL=https://rpc.testnet.arc.network
+NEXT_PUBLIC_ARC_EXPLORER_URL=https://testnet.arcscan.app
+NEXT_PUBLIC_VERICLAIM_CONTRACT_ADDRESS=
+```
+
+Restart `npm run dev` after changing environment variables.
+
+## Future Real Contract Setup
+
+Real Arc contract publishing is deferred. The `contracts/` folder remains in
+the repo so it can be activated later with Foundry/Forge.
 
 ```bash
 cd contracts
@@ -19,8 +61,6 @@ forge install foundry-rs/forge-std
 forge build
 forge test
 ```
-
-## Deploy
 
 Set deployment env vars:
 
@@ -40,39 +80,21 @@ forge script script/Deploy.s.sol:Deploy \
   --verify
 ```
 
-## Frontend Environment
+## Future Contract Publish Flow
 
-```bash
-NEXT_PUBLIC_ARC_CHAIN_ID=5042002
-NEXT_PUBLIC_ARC_RPC_URL=https://rpc.testnet.arc.network
-NEXT_PUBLIC_ARC_EXPLORER_URL=https://testnet.arcscan.app
-NEXT_PUBLIC_VERICLAIM_CONTRACT_ADDRESS=
-```
+The planned real path will:
 
-Restart `npm run dev` after changing these values.
-
-## Publish Flow
-
-1. User saves a MarketSpec to Firestore.
-2. User connects wallet and switches to Arc Testnet.
-3. Spec page calls `publishSpec(bytes32,string,uint256,uint256,uint256)`.
-4. Contract stores only:
-   - `bytes32 specHash`
-   - `metadataURI`
-   - agent IDs
-   - creator/timestamp
-5. After transaction confirmation, Firestore updates:
-   - `specs/{hash}.arcPublished = true`
-   - `specs/{hash}.arcTxHash = txHash`
-   - `arc_proofs/{id}`
-   - user reputation and badges
-
-Publishing awards `+20` reputation and can grant `First Arc Proof`.
+1. Connect a wallet and switch to Arc Testnet.
+2. Call `publishSpec(bytes32,string,uint256,uint256,uint256)`.
+3. Store only the MarketSpec hash, metadata URI, agent IDs, creator, and
+   timestamp on-chain.
+4. Confirm the transaction with wagmi/viem.
+5. Update Firestore with `arcMode: "contract"` and the real Arc transaction
+   hash.
 
 ## Limitations
 
+- The current Arc proof is mock/testnet metadata, not a real on-chain tx.
 - Private keys are never used in frontend code.
-- Contract verification depends on Arc explorer support.
-- `NEXT_PUBLIC_ARC_RPC_URL` must point to a working Arc Testnet RPC.
-- Firestore cannot verify the transaction on its own in the MVP; the client
-  writes proof metadata after wagmi confirms the transaction.
+- Firestore cannot independently verify mock or future contract transactions.
+- Real contract verification depends on Arc explorer support.

@@ -1,3 +1,5 @@
+import type { ArcProofMode } from "@/lib/arc/types";
+
 export type SourceType =
   | "manual"
   | "discord"
@@ -74,6 +76,8 @@ export interface MarketSpecRecord {
   createdAt: string;
   arcPublished: boolean;
   arcTxHash: string | null;
+  arcPublishedAt?: string | null;
+  arcMode?: ArcProofMode | null;
   challengeCount: number;
   rewardTotal: number;
   requirementIds: string[];

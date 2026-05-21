@@ -142,6 +142,8 @@ export const mockMarketSpecs: MarketSpecRecord[] = [
     arcPublished: true,
     arcTxHash:
       "0x7c21e0f26ad7ae0f5a55f454bf19fd8826c7d41bc4fd019cb46c8e2f04632a11",
+    arcPublishedAt: "2026-05-15T14:31:00.000Z",
+    arcMode: "mock",
     challengeCount: 3,
     rewardTotal: 42,
     requirementIds: ["REQ-LAND-003", "REQ-SPEC-002", "REQ-ARC-008"],
@@ -231,6 +233,8 @@ export const mockMarketSpecs: MarketSpecRecord[] = [
     createdAt: "2026-05-14T09:12:00.000Z",
     arcPublished: false,
     arcTxHash: null,
+    arcPublishedAt: null,
+    arcMode: null,
     challengeCount: 6,
     rewardTotal: 18,
     requirementIds: ["REQ-GALLERY-001", "REQ-COURT-002"],
@@ -321,6 +325,8 @@ export const mockMarketSpecs: MarketSpecRecord[] = [
     arcPublished: true,
     arcTxHash:
       "0x12ff749251f8db66b50385ce41cc9ca19b94c9d127c763f0f987318553c41a71",
+    arcPublishedAt: "2026-05-13T16:49:00.000Z",
+    arcMode: "mock",
     challengeCount: 9,
     rewardTotal: 27,
     requirementIds: ["REQ-CHAL-001", "REQ-SPEC-008"],
@@ -337,7 +343,7 @@ export const dashboardMetrics: DashboardMetric[] = [
   {
     label: "Arc proofs",
     value: "47",
-    delta: "+9 anchored",
+    delta: "+9 mock proofs",
     tone: "blue",
   },
   {
@@ -366,8 +372,8 @@ export const chartData: ChartPoint[] = [
 export const activityEvents: ActivityEvent[] = [
   {
     id: "activity-001",
-    title: "Arc proof anchored",
-    detail: "Arc mainnet MarketSpec published to testnet proof history.",
+    title: "Mock Arc proof saved",
+    detail: "Arc mainnet MarketSpec published to MVP proof history.",
     timestamp: "4 min ago",
     type: "proof",
   },

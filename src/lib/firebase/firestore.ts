@@ -15,6 +15,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 
+import type { ArcProofRecord } from "@/lib/arc/types";
 import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase/client";
 import type {
   ChallengeReasonCategory,
@@ -85,6 +86,12 @@ export interface PublishArcProofResult {
   creditAwarded: number;
   badgesAwarded: string[];
   alreadyPublished: boolean;
+}
+
+interface PersistArcProofInput {
+  spec: MarketSpecRecord;
+  user: User;
+  proof: ArcProofRecord;
 }
 
 function requireDb() {
@@ -312,6 +319,8 @@ function normalizeSpec(data: DocumentData): MarketSpecRecord {
     createdAt: String(data.createdAt ?? ""),
     arcPublished: Boolean(data.arcPublished),
     arcTxHash: data.arcTxHash ?? null,
+    arcPublishedAt: data.arcPublishedAt ?? null,
+    arcMode: data.arcMode ?? null,
     challengeCount: Number(data.challengeCount ?? 0),
     rewardTotal: Number(data.rewardTotal ?? 0),
     requirementIds: Array.isArray(data.requirementIds) ? data.requirementIds : [],
@@ -558,24 +567,20 @@ export async function saveChallengeCourtResult({
   }
 }
 
-export async function publishArcProofResult({
+async function persistArcProofResult({
   spec,
   user,
-  txHash,
-  chainId,
-  contractAddress,
-}: {
-  spec: MarketSpecRecord;
-  user: User;
-  txHash: string;
-  chainId: number;
-  contractAddress: string;
-}): Promise<PublishArcProofResult> {
+  proof,
+}: PersistArcProofInput): Promise<PublishArcProofResult> {
   const db = requireDb();
   const specRef = doc(db, "specs", spec.hash);
   const userRef = doc(db, "users", user.uid);
   const proofRef = doc(collection(db, "arc_proofs"));
   const activityRef = doc(collection(db, "activity_events"));
+
+  if (proof.publishedBy !== user.uid || proof.specHash !== spec.hash) {
+    throw new Error("Arc proof metadata does not match the signed-in user or spec.");
+  }
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -586,13 +591,17 @@ export async function publishArcProofResult({
       }
 
       const userSnapshot = await transaction.get(userRef);
-      const createdAt = nowIso();
+      const createdAt = proof.createdAt || nowIso();
       const currentSpec = normalizeSpec(specSnapshot.data());
       const updatedSpec: MarketSpecRecord = {
         ...currentSpec,
         status: "published",
         arcPublished: true,
-        arcTxHash: currentSpec.arcPublished ? currentSpec.arcTxHash : txHash,
+        arcTxHash: currentSpec.arcPublished ? currentSpec.arcTxHash : proof.txHash,
+        arcPublishedAt: currentSpec.arcPublished
+          ? currentSpec.arcPublishedAt
+          : createdAt,
+        arcMode: currentSpec.arcPublished ? currentSpec.arcMode : proof.mode,
       };
       const baseProfile = userSnapshot.exists()
         ? normalizeUserProfile(userSnapshot.data())
@@ -629,7 +638,7 @@ export async function publishArcProofResult({
       );
       const activity = profileActivity(
         "proof",
-        "Arc proof published",
+        proof.mode === "mock" ? "Mock Arc proof published" : "Arc proof published",
         currentSpec.marketSpec.question,
         reward.creditsDelta,
         reward.reputationDelta,
@@ -639,13 +648,17 @@ export async function publishArcProofResult({
       transaction.update(specRef, {
         status: "published",
         arcPublished: true,
-        arcTxHash: txHash,
+        arcTxHash: proof.txHash,
+        arcPublishedAt: createdAt,
+        arcMode: proof.mode,
       });
       transaction.set(proofRef, {
         specHash: spec.hash,
-        chainId,
-        contractAddress,
-        txHash,
+        chainId: proof.chainId,
+        chainName: proof.chainName,
+        contractAddress: proof.contractAddress ?? null,
+        txHash: proof.txHash,
+        mode: proof.mode,
         publishedBy: user.uid,
         createdAt,
       });
@@ -670,11 +683,12 @@ export async function publishArcProofResult({
         actorUid: user.uid,
         specHash: spec.hash,
         type: "proof",
-        title: "Arc proof published",
+        title: proof.mode === "mock" ? "Mock Arc proof published" : "Arc proof published",
         detail: currentSpec.marketSpec.question,
         creditDelta: reward.creditsDelta,
         reputationDelta: reward.reputationDelta,
-        txHash,
+        txHash: proof.txHash,
+        mode: proof.mode,
         createdAt,
       });
 
@@ -693,6 +707,43 @@ export async function publishArcProofResult({
 
     throw error;
   }
+}
+
+export async function publishMockArcProofResult({
+  spec,
+  user,
+  proof,
+}: PersistArcProofInput): Promise<PublishArcProofResult> {
+  return persistArcProofResult({ spec, user, proof });
+}
+
+export async function publishArcProofResult({
+  spec,
+  user,
+  txHash,
+  chainId,
+  contractAddress,
+}: {
+  spec: MarketSpecRecord;
+  user: User;
+  txHash: string;
+  chainId: number;
+  contractAddress: string;
+}): Promise<PublishArcProofResult> {
+  return persistArcProofResult({
+    spec,
+    user,
+    proof: {
+      specHash: spec.hash,
+      chainId,
+      chainName: "Arc Testnet",
+      contractAddress,
+      txHash: txHash as `0x${string}`,
+      mode: "contract",
+      publishedBy: user.uid,
+      createdAt: nowIso(),
+    },
+  });
 }
 
 export async function saveMarketSpec(spec: MarketSpecRecord, user: User): Promise<SaveSpecResult> {
@@ -739,6 +790,8 @@ export async function saveMarketSpec(spec: MarketSpecRecord, user: User): Promis
         createdAt,
         arcPublished: false,
         arcTxHash: null,
+        arcPublishedAt: null,
+        arcMode: null,
         challengeCount: 0,
         rewardTotal: 0,
       };

@@ -4,9 +4,10 @@ VeriClaim is the verifiable MarketSpec layer for AI-created prediction markets.
 It turns messy claims into prediction-market-ready MarketSpecs using an AI Court:
 Forger Agent, Critic Agent, and Judge Agent.
 
-This foundation pass implements the premium UI shell only. It does not implement
-real AI generation, Firebase persistence, Arc transactions, contracts, betting,
-trading, or financial advice.
+The current MVP includes the premium UI shell, AI MarketSpec generation,
+Firebase Auth/Firestore persistence, gamified reputation, challenges, and a
+clearly labeled mock Arc Testnet proof flow. It does not implement betting,
+trading, financial advice, or real on-chain publishing yet.
 
 ## Stack
 
@@ -20,8 +21,8 @@ trading, or financial advice.
 - Lucide React
 - Recharts
 - next-themes
-- wagmi + viem placeholders
-- Foundry configuration placeholder
+- wagmi + viem future contract path
+- Foundry contract scaffold for deferred Arc deployment
 
 ## Local Development
 
@@ -58,13 +59,11 @@ The UI foundation covers the first visible shell for:
 - `REQ-GAME-003` through `REQ-GAME-007` mock credits, reputation, stats,
   leaderboard, and activity feed.
 - `REQ-PAY-005` mock x402 badge.
+- Arc proof MVP uses Firestore-backed `mode: "mock"` proof records.
 
 ## Non-Goals In This Pass
 
 - Real betting or trading
 - Financial advice
-- Real AI provider calls
-- Firebase Auth or Firestore writes
-- Arc proof publishing
-- Solidity contract implementation
+- Real on-chain Arc proof publishing
 - Real x402 payment processing
