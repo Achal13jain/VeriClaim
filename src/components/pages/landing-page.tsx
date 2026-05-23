@@ -81,38 +81,22 @@ export function LandingPage() {
 
   return (
     <main>
-      <section className="relative min-h-[82svh] overflow-hidden border-b border-border/70">
+      <section
+        className="relative overflow-hidden border-b border-border/70"
+        data-testid="landing-hero"
+      >
         <div className="absolute inset-0 bg-court-grid bg-[size:54px_54px]" />
         <div className="absolute inset-x-0 bottom-0 h-2/3 border-t border-sky-400/20 bg-[linear-gradient(to_top,rgba(57,167,255,0.10),transparent)]" />
-        <div className="absolute bottom-0 left-1/2 h-44 w-[min(900px,90vw)] -translate-x-1/2 rounded-t-lg border border-court-blue/25 bg-background/50 backdrop-blur-sm" />
-        <div className="absolute bottom-8 left-1/2 grid w-[min(760px,84vw)] -translate-x-1/2 grid-cols-3 gap-4 opacity-80">
-          {mockAgents.map((agent) => (
-            <div
-              key={agent.agentId}
-              className="court-scan hidden min-h-28 rounded-lg border border-white/15 bg-white/10 p-4 backdrop-blur-xl sm:block"
-            >
-              <div className="font-mono text-xs text-muted-foreground">
-                {agent.role}
-              </div>
-              <div className="mt-2 font-semibold">{agent.name}</div>
-              <div className="mt-4 h-1.5 rounded-full bg-white/20">
-                <div
-                  className="h-full rounded-full bg-court-green"
-                  style={{ width: `${agent.winRate}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="absolute bottom-0 left-1/2 h-48 w-[min(980px,92vw)] -translate-x-1/2 rounded-t-lg border border-court-blue/20 bg-background/40 backdrop-blur-sm" />
 
-        <div className="relative z-10 mx-auto flex min-h-[82svh] w-full max-w-7xl flex-col justify-center px-4 py-20 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-4 pb-12 pt-16 sm:px-6 sm:pb-16 sm:pt-20 lg:px-8 lg:pb-20 lg:pt-24">
           <motion.div
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55 }}
-            className="max-w-5xl"
+            className="mx-auto max-w-5xl text-center"
           >
-            <div className="mb-6 flex flex-wrap gap-2">
+            <div className="mb-5 flex flex-wrap justify-center gap-2 sm:mb-6">
               <Badge variant="blue" className="gap-1.5">
                 <Sparkles className="size-3.5" />
                 AI Court
@@ -123,14 +107,23 @@ export function LandingPage() {
               />
               <X402PaymentBadge />
             </div>
-            <h1 className="max-w-4xl font-display text-6xl leading-[0.92] sm:text-7xl lg:text-8xl">
+            <h1
+              className="mx-auto max-w-5xl font-display text-5xl leading-[0.96] sm:text-6xl md:text-7xl lg:text-8xl xl:text-[6.75rem]"
+              data-testid="landing-hero-title"
+            >
               Turn claims into verifiable markets.
             </h1>
-            <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground sm:text-xl">
+            <p
+              className="mx-auto mt-5 max-w-3xl text-base leading-7 text-muted-foreground sm:mt-6 sm:text-lg sm:leading-8 lg:text-xl"
+              data-testid="landing-hero-subtitle"
+            >
               VeriClaim uses adversarial AI agents to forge, critique, and
-              validate prediction-market specs — then anchors proof on Arc.
+              validate prediction-market specs, then prepares Arc proof records.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div
+              className="mt-7 flex flex-wrap justify-center gap-3 sm:mt-8"
+              data-testid="landing-hero-ctas"
+            >
               <Button asChild variant="court" size="lg">
                 <Link href="/forge">
                   Forge a MarketSpec
@@ -141,17 +134,65 @@ export function LandingPage() {
                 <Link href="/specs">Explore Specs</Link>
               </Button>
             </div>
-            <div className="mt-8 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <div
+              className="mt-6 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground sm:mt-8"
+              data-testid="landing-hero-badges"
+            >
               <Badge variant="glass">No betting</Badge>
               <Badge variant="glass">No trading</Badge>
               <Badge variant="glass">No financial advice</Badge>
               <Badge variant="glass">Demo fallback ready</Badge>
             </div>
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.14 }}
+            className="mt-10 sm:mt-12 lg:mt-16"
+            data-testid="landing-court-preview"
+          >
+            <div className="glass-panel relative overflow-hidden rounded-lg p-4 sm:p-5 lg:p-6">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-court-blue/70 to-transparent" />
+              <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
+                <div className="space-y-4">
+                  <div>
+                    <p className="section-eyebrow">Live court preview</p>
+                    <h2 className="mt-2 font-display text-2xl leading-tight sm:text-3xl">
+                      Three agents, one settlement-ready spec.
+                    </h2>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                    {mockAgents.map((agent) => (
+                      <div
+                        key={agent.agentId}
+                        className="court-scan min-h-28 rounded-lg border border-white/15 bg-white/10 p-4 backdrop-blur-xl"
+                      >
+                        <div className="font-mono text-xs uppercase text-muted-foreground">
+                          {agent.role}
+                        </div>
+                        <div className="mt-2 font-semibold">{agent.name}</div>
+                        <div className="mt-4 h-1.5 rounded-full bg-white/20">
+                          <div
+                            className="h-full rounded-full bg-court-green"
+                            style={{ width: `${agent.winRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border/70 bg-background/65 p-3 backdrop-blur-xl sm:p-4">
+                  <AgentCourtTimeline steps={featuredSpec.agentTrace} />
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      <section className="page-shell grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+      <section className="page-shell grid gap-8 py-14 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:py-20">
         <div className="space-y-6">
           <p className="section-eyebrow">Messy input to proof-ready spec</p>
           <h2 className="font-display text-4xl leading-tight sm:text-5xl">
