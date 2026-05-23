@@ -30,6 +30,7 @@ export function AuthButton() {
   const [busy, setBusy] = useState<AuthAction | null>(null);
   const [notice, setNotice] = useState<AuthNotice | null>(null);
   const avatarUrl = profile?.photoURL || user?.photoURL || "";
+  const displayName = profile?.displayName || user?.displayName || "User";
   const reputation = profile?.reputation ?? 0;
   const level = getUserLevel(reputation);
 
@@ -115,8 +116,8 @@ export function AuthButton() {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="hidden items-center gap-2 xl:flex">
-        <Badge variant="glass" className="gap-1.5">
+      <div className="hidden items-center gap-2 2xl:flex">
+        <Badge variant="glass" className="h-9 gap-1.5 px-3">
           {avatarUrl ? (
             <span
               aria-hidden="true"
@@ -126,17 +127,21 @@ export function AuthButton() {
           ) : (
             <UserRound className="size-3.5" />
           )}
-          {profile?.displayName || user.displayName || "User"}
+          <span className="max-w-28 truncate">{displayName}</span>
         </Badge>
-        <Badge variant="glass">{profile?.credits ?? 100} credits</Badge>
-        <Badge variant="success">{reputation} rep</Badge>
-        <Badge variant="violet" className="gap-1.5">
+        <Badge variant="glass" className="h-9 px-3">
+          {profile?.credits ?? 100} credits
+        </Badge>
+        <Badge variant="success" className="h-9 px-3">
+          {reputation} rep
+        </Badge>
+        <Badge variant="violet" className="h-9 gap-1.5 px-3">
           <Award className="size-3.5" />
-          {level.title}
+          <span className="max-w-28 truncate">{level.title}</span>
         </Badge>
         {profile?.badges.slice(0, 1).map((badge) => (
-          <Badge key={badge} variant="blue">
-            {badge}
+          <Badge key={badge} variant="blue" className="h-9 px-3">
+            <span className="max-w-28 truncate">{badge}</span>
           </Badge>
         ))}
       </div>

@@ -24,15 +24,15 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3">
+        <Link href="/" className="flex shrink-0 items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-sky-400/30 bg-sky-400/12 text-sky-600 dark:text-sky-300">
             <CircuitBoard className="size-5" />
           </span>
-          <span className="min-w-0">
-            <span className="block truncate font-display text-2xl leading-none">
+          <span>
+            <span className="block font-display text-2xl leading-none">
               VeriClaim
             </span>
-            <span className="hidden truncate font-mono text-[11px] text-muted-foreground sm:block">
+            <span className="hidden font-mono text-[11px] text-muted-foreground sm:block">
               verifiable MarketSpecs
             </span>
           </span>
