@@ -20,6 +20,7 @@ coverage
 
 # logs
 *.log
+.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -28,6 +29,8 @@ pnpm-debug.log*
 # misc
 .DS_Store
 *.pem
+serviceAccount.json
+*-service-account.json
 
 # vercel
 .vercel
@@ -47,3 +50,5 @@ out
 !/docs/x402-integration.md
 !/docs/RELEASE_CHECKLIST.md
 !/docs/DEMO_SCRIPT.md
+!/docs/HACKATHON_SUBMISSION.md
+!/docs/ARC_CLI_NOTES.md
