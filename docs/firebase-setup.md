@@ -61,6 +61,9 @@ Gamification fields live on `users/{uid}`:
 - `badges`
 - `stats`
 - `activityHistory`
+- `freeForgeUsed`
+- `totalMockPayments`
+- `totalCreditsSpent`
 
 Challenge court documents live in `challenges/{id}` and public feed entries live
 in `activity_events/{id}`.
@@ -101,6 +104,8 @@ Security baseline:
 - `arc_proofs` can be created only by the signed-in publisher and must target
   Arc Testnet with `mode: "mock"` or `mode: "contract"`.
 - `activity_events` can be created only by the signed-in actor.
+- `payments` are readable only by the signed-in owner and creatable only for
+  controlled `forge_unlock` mock receipts or Forge Credit unlocks.
 - privileged collections are writable only by admins/server tooling.
 
 ## 6. Admins
@@ -122,6 +127,5 @@ Only existing admins can read admin docs. Admin writes are disabled from the cli
   best-effort `agent_runs` write only if local rules allow it.
 - Challenge rewards are applied through the client transaction helper until an
   Admin/API reward service is added.
-- Arc proof publishing currently uses the mock MVP proof flow; payments and
-  agent registry writes remain UI/demo-only until server-side services are
-  added.
+- Arc proof publishing and x402 payments currently use mock MVP flows; agent
+  registry writes remain UI/demo-only until server-side services are added.

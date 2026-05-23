@@ -22,6 +22,7 @@ import { JSONPreview } from "@/components/vericlaim/json-preview";
 import { PublishProofButton } from "@/components/spec/PublishProofButton";
 import { QualityScoreBadge } from "@/components/vericlaim/quality-score-badge";
 import { RewardToast } from "@/components/shared/RewardToast";
+import { X402PaymentBadge } from "@/components/shared/X402PaymentBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -203,6 +204,7 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
               txHash={spec.arcTxHash}
               mode={spec.arcMode}
             />
+            <X402PaymentBadge state="disabled" />
           </div>
           <h1 className="max-w-5xl font-display text-5xl leading-none sm:text-6xl">
             {spec.marketSpec.question}

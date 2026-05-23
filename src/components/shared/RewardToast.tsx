@@ -16,7 +16,9 @@ export function RewardToast({
   badgesAwarded?: string[];
   message?: string;
 }) {
-  if (!creditsDelta && !reputationDelta && badgesAwarded.length === 0) {
+  const hasReward = Boolean(creditsDelta || reputationDelta || badgesAwarded.length);
+
+  if (!hasReward && message === "Reward applied") {
     return null;
   }
 
@@ -34,26 +36,32 @@ export function RewardToast({
         </div>
         <div className="min-w-0 space-y-2">
           <p className="font-semibold">{message}</p>
-          <div className="flex flex-wrap gap-2">
-            {reputationDelta ? (
-              <Badge variant={reputationDelta > 0 ? "success" : "warning"}>
-                {reputationDelta > 0 ? "+" : ""}
-                {reputationDelta} rep
-              </Badge>
-            ) : null}
-            {creditsDelta ? (
-              <Badge variant="blue" className="gap-1.5">
-                <Coins className="size-3.5" />
-                {creditsDelta > 0 ? "+" : ""}
-                {creditsDelta} credits
-              </Badge>
-            ) : null}
-            {badgesAwarded.map((badge) => (
-              <Badge key={badge} variant="violet">
-                {badge}
-              </Badge>
-            ))}
-          </div>
+          {hasReward ? (
+            <div className="flex flex-wrap gap-2">
+              {reputationDelta ? (
+                <Badge variant={reputationDelta > 0 ? "success" : "warning"}>
+                  {reputationDelta > 0 ? "+" : ""}
+                  {reputationDelta} rep
+                </Badge>
+              ) : null}
+              {creditsDelta ? (
+                <Badge variant="blue" className="gap-1.5">
+                  <Coins className="size-3.5" />
+                  {creditsDelta > 0 ? "+" : ""}
+                  {creditsDelta} credits
+                </Badge>
+              ) : null}
+              {badgesAwarded.map((badge) => (
+                <Badge key={badge} variant="violet">
+                  {badge}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Demo-only unlock recorded. No real money moved.
+            </p>
+          )}
         </div>
       </div>
     </motion.div>

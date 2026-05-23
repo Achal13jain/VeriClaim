@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Crown, Trophy } from "lucide-react";
 
+import { PaymentHistory } from "@/components/payments/PaymentHistory";
 import { ActivityFeed } from "@/components/vericlaim/activity-feed";
 import { DashboardStats } from "@/components/vericlaim/dashboard-stats";
 import { ReputationBadge } from "@/components/vericlaim/reputation-badge";
@@ -30,10 +31,13 @@ import {
 } from "@/lib/mock-data";
 import {
   firebaseReady,
+  listUserPayments,
   listPublicSpecs,
   listRecentActivityEvents,
   listTopUsers,
 } from "@/lib/firebase/firestore";
+import { useAuthState } from "@/lib/firebase/auth";
+import type { PaymentRecord } from "@/lib/payments/types";
 import type {
   ActivityEvent,
   ChartPoint,
@@ -155,9 +159,11 @@ function buildRecentActivity(specs: MarketSpecRecord[]): ActivityEvent[] {
 }
 
 export function DashboardPage() {
+  const { user } = useAuthState();
   const [specs, setSpecs] = useState<MarketSpecRecord[]>([]);
   const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -169,16 +175,18 @@ export function DashboardPage() {
       setLoadError(null);
 
       try {
-        const [savedSpecs, savedUsers, savedEvents] = await Promise.all([
+        const [savedSpecs, savedUsers, savedEvents, savedPayments] = await Promise.all([
           listPublicSpecs(100),
           listTopUsers(10),
           listRecentActivityEvents(8),
+          user ? listUserPayments(user.uid, 8) : Promise.resolve([]),
         ]);
 
         if (active) {
           setSpecs(savedSpecs);
           setTopUsers(savedUsers);
           setEvents(savedEvents);
+          setPayments(savedPayments);
         }
       } catch (caughtError) {
         if (active) {
@@ -200,7 +208,7 @@ export function DashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
   const metrics = useMemo(() => buildMetrics(specs, loading), [loading, specs]);
   const chartData = useMemo(() => buildChartData(specs), [specs]);
@@ -311,6 +319,26 @@ export function DashboardPage() {
           events={displayedEvents}
           badge={events.length ? "Firestore activity" : "mock fallback"}
         />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+        <PaymentHistory payments={payments} loading={loading} />
+        <Card className="glass-panel">
+          <CardHeader>
+            <CardTitle>Mock x402 unlock layer</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
+            <p>
+              Forge gives each signed-in user 3 free MarketSpec generations.
+              After that, the MVP asks for 1 Forge Credit or creates a mock
+              x402 receipt worth $0.01.
+            </p>
+            <p>
+              This is demo-only accounting. Real x402 payment support is
+              planned and no real money moves in the current build.
+            </p>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">

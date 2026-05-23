@@ -6,8 +6,9 @@ Forger Agent, Critic Agent, and Judge Agent.
 
 The current MVP includes the premium UI shell, AI MarketSpec generation,
 Firebase Auth/Firestore persistence, gamified reputation, challenges, and a
-clearly labeled mock Arc Testnet proof flow. It does not implement betting,
-trading, financial advice, or real on-chain publishing yet.
+clearly labeled mock Arc Testnet proof flow plus mock x402 Forge unlocks. It
+does not implement betting, trading, financial advice, real payments, or real
+on-chain publishing yet.
 
 ## Stack
 
@@ -59,6 +60,7 @@ The UI foundation covers the first visible shell for:
 - `REQ-GAME-003` through `REQ-GAME-007` mock credits, reputation, stats,
   leaderboard, and activity feed.
 - `REQ-PAY-005` mock x402 badge.
+- `REQ-PAY-*` mock x402 unlock flow for premium Forge generations.
 - Arc proof MVP uses Firestore-backed `mode: "mock"` proof records.
 
 ## Non-Goals In This Pass

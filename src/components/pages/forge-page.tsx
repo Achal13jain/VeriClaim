@@ -7,6 +7,7 @@ import {
   AlertCircle,
   ArrowRight,
   BadgeCheck,
+  BadgeDollarSign,
   Coins,
   ExternalLink,
   Loader2,
@@ -14,12 +15,13 @@ import {
   Save,
 } from "lucide-react";
 
+import { PaymentModal } from "@/components/payments/PaymentModal";
+import { X402PaymentBadge } from "@/components/shared/X402PaymentBadge";
 import { AgentCourtTimeline } from "@/components/vericlaim/agent-court-timeline";
 import { RewardToast } from "@/components/shared/RewardToast";
 import { JSONPreview } from "@/components/vericlaim/json-preview";
 import { MarketSpecCard } from "@/components/vericlaim/market-spec-card";
 import { SampleClaimChips } from "@/components/vericlaim/sample-claim-chips";
-import { X402PaymentBadge } from "@/components/vericlaim/x402-payment-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,8 +41,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ForgeResponseSchema, type ForgeResponse } from "@/lib/agents/schemas";
 import { useAuthState } from "@/lib/firebase/auth";
-import { firebaseReady, saveMarketSpec } from "@/lib/firebase/firestore";
+import {
+  consumeFreeForgeUse,
+  firebaseReady,
+  saveMarketSpec,
+  saveMockPaymentUnlock,
+  spendForgeCreditForUnlock,
+} from "@/lib/firebase/firestore";
 import { featuredSpec } from "@/lib/mock-data";
+import { PaymentResponseSchema, FREE_FORGE_LIMIT } from "@/lib/payments/types";
+import { X402_PRICE_USD } from "@/lib/payments/x402";
 import type {
   AgentRole,
   AgentTraceStep,
@@ -202,6 +212,8 @@ function responseToRecord(
     createdAt: new Date().toISOString(),
     arcPublished: false,
     arcTxHash: null,
+    arcPublishedAt: null,
+    arcMode: null,
     challengeCount: 0,
     rewardTotal: 0,
     requirementIds: [
@@ -258,11 +270,13 @@ function recordToPreviewResponse(spec: MarketSpecRecord): ForgeResponse {
 }
 
 export function ForgePage() {
-  const { configured, user } = useAuthState();
+  const { configured, user, profile } = useAuthState();
   const [claim, setClaim] = useState(featuredSpec.sourceClaim);
   const [sourceType, setSourceType] = useState<SourceType>("manual");
   const [isForging, setIsForging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [unlockBusy, setUnlockBusy] = useState<"credit" | "mock" | null>(null);
   const [phaseIndex, setPhaseIndex] = useState(forgePhases.length - 1);
   const [forgeResponse, setForgeResponse] = useState<ForgeResponse | null>(
     null,
@@ -278,6 +292,7 @@ export function ForgePage() {
     creditsDelta: number;
     reputationDelta: number;
     badgesAwarded: string[];
+    message: string;
   } | null>(null);
 
   useEffect(() => {
@@ -306,8 +321,19 @@ export function ForgePage() {
 
   const jsonPreview = forgeResponse ?? recordToPreviewResponse(previewSpec);
   const activePhase = forgePhases[phaseIndex];
+  const freeForgesUsed = profile?.freeForgeUsed ?? 0;
+  const freeForgesRemaining = Math.max(0, FREE_FORGE_LIMIT - freeForgesUsed);
+  const creditBalance = profile?.credits ?? 0;
+  const paymentBadgeState =
+    !configured || !firebaseReady()
+      ? "disabled"
+      : freeForgesRemaining > 0
+        ? "mock-unlocked"
+        : creditBalance > 0
+          ? "credit"
+          : "required";
 
-  async function runForge() {
+  async function executeForge() {
     setIsForging(true);
     setPhaseIndex(0);
     setError(null);
@@ -365,6 +391,138 @@ export function ForgePage() {
     }
   }
 
+  async function runForge() {
+    if (!claim.trim() || claim.length > 5000 || isForging || unlockBusy) {
+      return;
+    }
+
+    if (!configured || !firebaseReady()) {
+      await executeForge();
+      return;
+    }
+
+    if (!user) {
+      setError("Sign in with Google or demo auth before using metered Forge.");
+      return;
+    }
+
+    if (!profile) {
+      setError("User profile is still loading. Try again in a moment.");
+      return;
+    }
+
+    if (profile.freeForgeUsed < FREE_FORGE_LIMIT) {
+      setUnlockBusy("mock");
+
+      try {
+        await consumeFreeForgeUse(user);
+        await executeForge();
+      } catch (caughtError) {
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Could not unlock this free Forge run.",
+        );
+      } finally {
+        setUnlockBusy(null);
+      }
+      return;
+    }
+
+    setPaymentModalOpen(true);
+  }
+
+  async function runForgeAfterCreditUnlock() {
+    if (!user) {
+      setError("Sign in before spending Forge Credits.");
+      return;
+    }
+
+    setUnlockBusy("credit");
+    setError(null);
+
+    try {
+      await spendForgeCreditForUnlock(user);
+      setPaymentModalOpen(false);
+      setRewardToast({
+        creditsDelta: -1,
+        reputationDelta: 0,
+        badgesAwarded: [],
+        message: "Forge Credit spent",
+      });
+      window.setTimeout(() => setRewardToast(null), 3200);
+      await executeForge();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not spend this Forge Credit.",
+      );
+    } finally {
+      setUnlockBusy(null);
+    }
+  }
+
+  async function runForgeAfterMockPayment() {
+    if (!user) {
+      setError("Sign in before using mock x402.");
+      return;
+    }
+
+    setUnlockBusy("mock");
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          type: "forge_unlock",
+          mode: "mock_x402",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          payload && typeof payload === "object" && "error" in payload
+            ? String(payload.error)
+            : "Mock x402 unlock failed.";
+        throw new Error(message);
+      }
+
+      const parsed = PaymentResponseSchema.safeParse(payload);
+
+      if (!parsed.success) {
+        throw new Error("Mock x402 returned an invalid receipt.");
+      }
+
+      await saveMockPaymentUnlock(user, parsed.data);
+      setPaymentModalOpen(false);
+      setRewardToast({
+        creditsDelta: 0,
+        reputationDelta: 0,
+        badgesAwarded: [],
+        message: "Mock x402 payment completed",
+      });
+      window.setTimeout(() => setRewardToast(null), 3200);
+      await executeForge();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not complete the mock x402 payment.",
+      );
+    } finally {
+      setUnlockBusy(null);
+    }
+  }
+
   function selectSampleClaim(nextClaim: string) {
     setClaim(nextClaim);
     setForgeResponse(null);
@@ -373,6 +531,7 @@ export function ForgePage() {
     setError(null);
     setSaveMessage(null);
     setSavedHash(null);
+    setPaymentModalOpen(false);
     setPhaseIndex(forgePhases.length - 1);
   }
 
@@ -412,6 +571,7 @@ export function ForgePage() {
         creditsDelta: result.creditAwarded,
         reputationDelta: result.reputationAwarded,
         badgesAwarded: result.badgesAwarded,
+        message: "Forge reward",
       });
       window.setTimeout(() => setRewardToast(null), 3200);
     } catch (caughtError) {
@@ -433,10 +593,19 @@ export function ForgePage() {
             creditsDelta={rewardToast.creditsDelta}
             reputationDelta={rewardToast.reputationDelta}
             badgesAwarded={rewardToast.badgesAwarded}
-            message="Forge reward"
+            message={rewardToast.message}
           />
         ) : null}
       </AnimatePresence>
+      <PaymentModal
+        open={paymentModalOpen}
+        credits={creditBalance}
+        priceUsd={X402_PRICE_USD}
+        busy={unlockBusy}
+        onClose={() => setPaymentModalOpen(false)}
+        onUseCredit={runForgeAfterCreditUnlock}
+        onMockPayment={runForgeAfterMockPayment}
+      />
       <section className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div className="max-w-3xl space-y-4">
           <div className="flex flex-wrap gap-2">
@@ -448,7 +617,7 @@ export function ForgePage() {
                   ? "Demo fallback validated"
                   : "API ready"}
             </Badge>
-            <X402PaymentBadge state="disabled" />
+            <X402PaymentBadge state={paymentBadgeState} />
           </div>
           <h1 className="font-display text-5xl leading-none sm:text-6xl">
             Forge a MarketSpec.
@@ -456,13 +625,18 @@ export function ForgePage() {
           <p className="text-muted-foreground">
             Paste a messy claim, choose a source type, and run the AI Court.
             Gemini forges, Groq critiques, and the Judge returns a validated
-            MarketSpec or deterministic demo fallback.
+            MarketSpec or deterministic demo fallback. First 3 Forge runs are
+            free; later runs use 1 Forge Credit or a mock x402 unlock.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="success" className="gap-1.5">
             <Coins className="size-3.5" />
-            100 Forge Credits
+            {profile ? creditBalance : 100} Forge Credits
+          </Badge>
+          <Badge variant="blue" className="gap-1.5">
+            <BadgeDollarSign className="size-3.5" />
+            {freeForgesRemaining} free forges left
           </Badge>
           <Badge variant="violet" className="gap-1.5">
             <BadgeCheck className="size-3.5" />
@@ -522,6 +696,17 @@ export function ForgePage() {
               <SampleClaimChips onSelect={selectSampleClaim} />
             </div>
 
+            <div className="rounded-md border border-violet-400/25 bg-violet-400/10 p-3 text-sm leading-6 text-muted-foreground">
+              <div className="mb-2 flex flex-wrap gap-2">
+                <X402PaymentBadge state={paymentBadgeState} />
+                <Badge variant="glass">
+                  {freeForgesUsed}/{FREE_FORGE_LIMIT} free used
+                </Badge>
+              </div>
+              MVP uses mock x402. Real x402 payment support is planned, and no
+              real money moves in this demo.
+            </div>
+
             {error ? (
               <div className="flex gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
@@ -540,14 +725,14 @@ export function ForgePage() {
               type="button"
               variant="court"
               size="lg"
-              disabled={!claim.trim() || claim.length > 5000 || isForging}
+              disabled={!claim.trim() || claim.length > 5000 || isForging || unlockBusy !== null}
               onClick={runForge}
               className="w-full"
             >
-              {isForging ? (
+              {isForging || unlockBusy ? (
                 <>
                   <Loader2 className="animate-spin" />
-                  Running AI Court
+                  {isForging ? "Running AI Court" : "Unlocking Forge"}
                 </>
               ) : (
                 <>

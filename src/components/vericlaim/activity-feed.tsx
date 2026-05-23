@@ -14,6 +14,7 @@ const iconByType = {
   challenge: Siren,
   proof: ShieldCheck,
   reward: Coins,
+  payment: Coins,
 };
 
 export function ActivityFeed({

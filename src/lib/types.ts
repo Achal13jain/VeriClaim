@@ -109,7 +109,7 @@ export interface ActivityEvent {
   title: string;
   detail: string;
   timestamp: string;
-  type: "forge" | "challenge" | "proof" | "reward";
+  type: "forge" | "challenge" | "proof" | "reward" | "payment";
 }
 
 export interface LeaderboardUser {

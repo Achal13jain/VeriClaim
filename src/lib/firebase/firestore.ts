@@ -12,6 +12,7 @@ import {
   runTransaction,
   setDoc,
   updateDoc,
+  where,
   type DocumentData,
 } from "firebase/firestore";
 
@@ -30,6 +31,8 @@ import {
   getUserLevel,
   type UserStats,
 } from "@/lib/gamification/rules";
+import { createForgeCreditPayment } from "@/lib/payments/mockPayment";
+import { FREE_FORGE_LIMIT, type PaymentRecord } from "@/lib/payments/types";
 import { hashMarketSpec } from "@/lib/utils/hashMarketSpec";
 import type {
   ActivityEvent,
@@ -48,13 +51,16 @@ export interface UserProfile {
   badges: string[];
   stats: UserStats;
   activityHistory: ProfileActivity[];
+  freeForgeUsed: number;
+  totalMockPayments: number;
+  totalCreditsSpent: number;
   createdAt: string;
   lastActiveAt: string;
 }
 
 export interface ProfileActivity {
   id: string;
-  type: "forge" | "challenge" | "proof" | "reward";
+  type: "forge" | "challenge" | "proof" | "reward" | "payment";
   title: string;
   detail: string;
   creditDelta: number;
@@ -88,6 +94,12 @@ export interface PublishArcProofResult {
   alreadyPublished: boolean;
 }
 
+export interface ForgeUnlockResult {
+  payment?: PaymentRecord;
+  freeForgeUsed: number;
+  creditsRemaining: number;
+}
+
 interface PersistArcProofInput {
   spec: MarketSpecRecord;
   user: User;
@@ -119,6 +131,9 @@ function profileFromUser(user: User, timestamp: string): UserProfile {
     badges: [],
     stats: { ...defaultUserStats },
     activityHistory: [],
+    freeForgeUsed: 0,
+    totalMockPayments: 0,
+    totalCreditsSpent: 0,
     createdAt: timestamp,
     lastActiveAt: timestamp,
   };
@@ -184,8 +199,28 @@ function normalizeUserProfile(data: DocumentData): UserProfile {
     badges: Array.isArray(data.badges) ? data.badges.map(String) : [],
     stats: normalizeUserStats(data.stats),
     activityHistory: normalizeActivityHistory(data.activityHistory),
+    freeForgeUsed: Number(data.freeForgeUsed ?? 0),
+    totalMockPayments: Number(data.totalMockPayments ?? 0),
+    totalCreditsSpent: Number(data.totalCreditsSpent ?? 0),
     createdAt: String(data.createdAt ?? ""),
     lastActiveAt: String(data.lastActiveAt ?? ""),
+  };
+}
+
+function normalizePaymentRecord(
+  id: string,
+  data: DocumentData,
+): PaymentRecord {
+  return {
+    id,
+    userId: String(data.userId ?? data.uid ?? ""),
+    type: "forge_unlock",
+    mode: data.mode === "forge_credit" ? "forge_credit" : "mock_x402",
+    amountUsd: Number(data.amountUsd ?? data.amount ?? 0),
+    creditsSpent: Number(data.creditsSpent ?? 0),
+    txReference: String(data.txReference ?? id),
+    status: "completed",
+    createdAt: String(data.createdAt ?? nowIso()),
   };
 }
 
@@ -272,12 +307,22 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
   const timestamp = nowIso();
 
   if (snapshot.exists()) {
+    const profile = normalizeUserProfile(snapshot.data());
+
     await updateDoc(userRef, {
+      credits: Math.max(0, profile.credits),
+      reputation: Math.max(0, profile.reputation),
+      badges: profile.badges,
+      stats: profile.stats,
+      activityHistory: profile.activityHistory,
+      freeForgeUsed: profile.freeForgeUsed,
+      totalMockPayments: profile.totalMockPayments,
+      totalCreditsSpent: profile.totalCreditsSpent,
       lastActiveAt: timestamp,
     });
 
     return {
-      ...normalizeUserProfile(snapshot.data()),
+      ...profile,
       lastActiveAt: timestamp,
     };
   }
@@ -413,6 +458,25 @@ export async function listRecentActivityEvents(max = 8) {
   return snapshot.docs.map((item) =>
     normalizeActivityEvent(item.id, item.data()),
   );
+}
+
+export async function listUserPayments(uid: string, max = 8) {
+  if (!firebaseReady()) {
+    return [];
+  }
+
+  const db = requireDb();
+  const snapshot = await getDocs(
+    query(
+      collection(db, "payments"),
+      where("userId", "==", uid),
+      limit(max),
+    ),
+  );
+
+  return snapshot.docs
+    .map((item) => normalizePaymentRecord(item.id, item.data()))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 async function saveAgentRunBestEffort(spec: MarketSpecRecord, uid: string) {
@@ -744,6 +808,196 @@ export async function publishArcProofResult({
       createdAt: nowIso(),
     },
   });
+}
+
+export async function consumeFreeForgeUse(user: User): Promise<ForgeUnlockResult> {
+  const db = requireDb();
+  const userRef = doc(db, "users", user.uid);
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const userSnapshot = await transaction.get(userRef);
+      const createdAt = nowIso();
+      const baseProfile = userSnapshot.exists()
+        ? normalizeUserProfile(userSnapshot.data())
+        : profileFromUser(user, createdAt);
+
+      if (baseProfile.freeForgeUsed >= FREE_FORGE_LIMIT) {
+        throw new Error("Free forge limit reached.");
+      }
+
+      const nextFreeForgeUsed = baseProfile.freeForgeUsed + 1;
+
+      transaction.set(
+        userRef,
+        {
+          ...baseProfile,
+          uid: user.uid,
+          freeForgeUsed: nextFreeForgeUsed,
+          lastActiveAt: createdAt,
+        },
+        { merge: true },
+      );
+
+      return {
+        freeForgeUsed: nextFreeForgeUsed,
+        creditsRemaining: baseProfile.credits,
+      };
+    });
+  } catch (error) {
+    if (isFirebasePermissionError(error)) {
+      throw new Error(firestorePermissionMessage("tracking this free forge"));
+    }
+
+    throw error;
+  }
+}
+
+export async function spendForgeCreditForUnlock(
+  user: User,
+): Promise<ForgeUnlockResult> {
+  const db = requireDb();
+  const userRef = doc(db, "users", user.uid);
+  const paymentRef = doc(collection(db, "payments"));
+  const activityRef = doc(collection(db, "activity_events"));
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const userSnapshot = await transaction.get(userRef);
+      const createdAt = nowIso();
+      const baseProfile = userSnapshot.exists()
+        ? normalizeUserProfile(userSnapshot.data())
+        : profileFromUser(user, createdAt);
+
+      if (baseProfile.credits < 1) {
+        throw new Error("You need at least 1 Forge Credit for this unlock.");
+      }
+
+      const payment = {
+        ...createForgeCreditPayment(user.uid),
+        createdAt,
+      };
+      const activity = profileActivity(
+        "payment",
+        "Forge Credit spent",
+        "Unlocked one premium MarketSpec generation.",
+        -payment.creditsSpent,
+        0,
+        createdAt,
+      );
+      const creditsRemaining = Math.max(0, baseProfile.credits - 1);
+
+      transaction.set(paymentRef, payment);
+      transaction.set(
+        userRef,
+        {
+          ...baseProfile,
+          uid: user.uid,
+          credits: creditsRemaining,
+          totalCreditsSpent:
+            baseProfile.totalCreditsSpent + payment.creditsSpent,
+          activityHistory: updateProfileActivity(baseProfile, activity),
+          lastActiveAt: createdAt,
+        },
+        { merge: true },
+      );
+      transaction.set(activityRef, {
+        actorUid: user.uid,
+        type: "payment",
+        title: "Forge Credit spent",
+        detail: "Unlocked one premium MarketSpec generation.",
+        creditDelta: -payment.creditsSpent,
+        reputationDelta: 0,
+        txReference: payment.txReference,
+        mode: payment.mode,
+        createdAt,
+      });
+
+      return {
+        payment,
+        freeForgeUsed: baseProfile.freeForgeUsed,
+        creditsRemaining,
+      };
+    });
+  } catch (error) {
+    if (isFirebasePermissionError(error)) {
+      throw new Error(firestorePermissionMessage("spending this Forge Credit"));
+    }
+
+    throw error;
+  }
+}
+
+export async function saveMockPaymentUnlock(
+  user: User,
+  payment: PaymentRecord,
+): Promise<ForgeUnlockResult> {
+  const db = requireDb();
+  const userRef = doc(db, "users", user.uid);
+  const paymentRef = doc(collection(db, "payments"));
+  const activityRef = doc(collection(db, "activity_events"));
+
+  if (payment.userId !== user.uid || payment.mode !== "mock_x402") {
+    throw new Error("Mock x402 receipt does not match the signed-in user.");
+  }
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const userSnapshot = await transaction.get(userRef);
+      const createdAt = payment.createdAt || nowIso();
+      const baseProfile = userSnapshot.exists()
+        ? normalizeUserProfile(userSnapshot.data())
+        : profileFromUser(user, createdAt);
+      const activity = profileActivity(
+        "payment",
+        "Mock x402 payment completed",
+        "Unlocked one premium MarketSpec generation.",
+        0,
+        0,
+        createdAt,
+      );
+
+      transaction.set(paymentRef, {
+        ...payment,
+        status: "completed",
+        createdAt,
+      });
+      transaction.set(
+        userRef,
+        {
+          ...baseProfile,
+          uid: user.uid,
+          totalMockPayments: baseProfile.totalMockPayments + 1,
+          activityHistory: updateProfileActivity(baseProfile, activity),
+          lastActiveAt: createdAt,
+        },
+        { merge: true },
+      );
+      transaction.set(activityRef, {
+        actorUid: user.uid,
+        type: "payment",
+        title: "Mock x402 payment completed",
+        detail: "Unlocked one premium MarketSpec generation.",
+        creditDelta: 0,
+        reputationDelta: 0,
+        txReference: payment.txReference,
+        mode: payment.mode,
+        createdAt,
+      });
+
+      return {
+        payment,
+        freeForgeUsed: baseProfile.freeForgeUsed,
+        creditsRemaining: baseProfile.credits,
+      };
+    });
+  } catch (error) {
+    if (isFirebasePermissionError(error)) {
+      throw new Error(firestorePermissionMessage("saving this mock payment"));
+    }
+
+    throw error;
+  }
 }
 
 export async function saveMarketSpec(spec: MarketSpecRecord, user: User): Promise<SaveSpecResult> {
