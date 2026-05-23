@@ -21,6 +21,9 @@ The Forge page allows:
 4. Mock Arc proof publishing remains free.
 
 The UI always labels this as **Mock x402 payment**. No real money moves.
+The current unlock gate is designed for demo UX and is not a production payment
+or entitlement system. Server-side enforcement with verified payment receipts is
+deferred.
 
 ## Data Model
 
@@ -90,3 +93,5 @@ while preserving the Forge unlock contract and Firestore history shape.
   to the client.
 - Firebase Admin verification is deferred; Firestore rules remain the final
   client-write boundary in the MVP.
+- `/api/forge` remains callable directly in the MVP; the Forge page enforces
+  free-use, Forge Credit, and mock x402 UX for the demo path.

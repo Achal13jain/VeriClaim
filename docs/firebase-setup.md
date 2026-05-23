@@ -33,6 +33,12 @@ Enable these sign-in providers:
 - Google
 - Anonymous, optional but useful for demo mode
 
+In **Authentication -> Settings -> Authorized domains**, add:
+
+- `localhost` for local development.
+- Your Vercel production domain.
+- Any Vercel preview domain you plan to demo from.
+
 New users receive:
 
 - `credits: 100`
@@ -82,6 +88,8 @@ firebase deploy --only firestore:rules
 The repo rule file is `firestore.rules`. If your local Firebase CLI says it
 cannot find `firebase.json`, run `firebase init firestore` and choose the
 existing `firestore.rules` file, or keep a local `firebase.json` deploy helper.
+The MVP repo does not require committing a project-specific `firebase.json`.
+
 You can deploy without setting an active project by passing the project ID:
 
 ```bash
@@ -122,6 +130,9 @@ Only existing admins can read admin docs. Admin writes are disabled from the cli
 ## 7. Known Limitations
 
 - Firebase Admin SDK is intentionally not used yet.
+- Credits, reputation, challenge rewards, mock payments, and mock Arc proof
+  writes are demo-safe client flows protected by Firestore rules, not
+  production-grade server authority.
 - `agent_runs` writes are denied from the browser by security rules, so the
   current client embeds the agent trace in `specs/{hash}` and attempts a
   best-effort `agent_runs` write only if local rules allow it.

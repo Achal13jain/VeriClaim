@@ -28,6 +28,8 @@ on Arc**. The app then:
 
 The UI must not present this as a real on-chain transaction. It is an MVP proof
 record that matches the intended Firestore schema and final user experience.
+No wallet, RPC call, contract address, Foundry install, or testnet faucet is
+required for the current mock flow.
 
 ## Arc Testnet
 
