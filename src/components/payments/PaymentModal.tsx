@@ -35,7 +35,7 @@ export function PaymentModal({
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
               <X402PaymentBadge state="required" />
-              <Badge variant="glass">MVP mock mode</Badge>
+              <Badge variant="glass">Mock mode</Badge>
             </div>
             <h2 className="font-display text-3xl leading-none">
               Unlock one Forge run.
@@ -108,8 +108,8 @@ export function PaymentModal({
         <div className="mt-4 flex gap-3 rounded-md border border-sky-400/25 bg-sky-400/10 p-3 text-sm text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-court-blue" />
           <span>
-            MVP uses mock x402. Real x402 payment support is planned and can
-            reuse this unlock contract later.
+            VeriClaim currently uses mock x402. Real payment support is planned
+            and can reuse this unlock flow later.
           </span>
         </div>
       </div>

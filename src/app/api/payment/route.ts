@@ -49,7 +49,7 @@ function getBearerUid(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!isMockX402Mode()) {
     return NextResponse.json(
-      { error: "Only mock x402 mode is enabled in this MVP." },
+      { error: "Only mock x402 mode is enabled in the current implementation." },
       { status: 400 },
     );
   }

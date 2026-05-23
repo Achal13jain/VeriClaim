@@ -210,12 +210,12 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
             {spec.marketSpec.question}
           </h1>
           <p className="max-w-3xl text-muted-foreground">
-            Public demo page for MarketSpec hash{" "}
+            Public MarketSpec page for hash{" "}
             <span className="font-mono text-foreground">
               {formatHash(spec.hash)}
             </span>
-            . The MVP saves a clearly labeled mock Arc Testnet proof while the
-            real contract path remains deferred.
+            . The current implementation saves a clearly labeled mock Arc
+            Testnet proof while the real contract path remains planned.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button type="button" variant="court" onClick={copyShareLink}>

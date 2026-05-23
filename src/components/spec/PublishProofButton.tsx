@@ -103,7 +103,7 @@ export function PublishProofButton({
         )}
       </Button>
       <p className="text-xs leading-5 text-muted-foreground">
-        MVP mode creates a mock Arc Testnet proof in Firestore. Real contract
+        Mock mode creates an Arc Testnet proof record in Firestore. Real contract
         publishing can plug into this same flow later.
       </p>
       {disabledReason ? (

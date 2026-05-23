@@ -330,11 +330,11 @@ export function DashboardPage() {
           <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
             <p>
               Forge gives each signed-in user 3 free MarketSpec generations.
-              After that, the MVP asks for 1 Forge Credit or creates a mock
+              After that, VeriClaim asks for 1 Forge Credit or creates a mock
               x402 receipt worth $0.01.
             </p>
             <p>
-              This is demo-only accounting. Real x402 payment support is
+              This is mock-mode accounting. Real x402 payment support is
               planned and no real money moves in the current build.
             </p>
           </CardContent>

@@ -703,8 +703,8 @@ export function ForgePage() {
                   {freeForgesUsed}/{FREE_FORGE_LIMIT} free used
                 </Badge>
               </div>
-              MVP uses mock x402. Real x402 payment support is planned, and no
-              real money moves in this demo.
+              VeriClaim currently uses mock x402. Real payment support is
+              planned, and no real money moves.
             </div>
 
             {error ? (

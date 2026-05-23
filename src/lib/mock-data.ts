@@ -373,7 +373,7 @@ export const activityEvents: ActivityEvent[] = [
   {
     id: "activity-001",
     title: "Mock Arc proof saved",
-    detail: "Arc mainnet MarketSpec published to MVP proof history.",
+    detail: "Arc mainnet MarketSpec published to proof history.",
     timestamp: "4 min ago",
     type: "proof",
   },
@@ -394,7 +394,7 @@ export const activityEvents: ActivityEvent[] = [
   {
     id: "activity-004",
     title: "Reward received",
-    detail: "A public spec earned 12 Forge Credits from reviewers.",
+    detail: "A public spec earned 12 Forge Credits from validators.",
     timestamp: "1 hr ago",
     type: "reward",
   },
