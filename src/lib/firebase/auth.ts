@@ -26,6 +26,86 @@ export interface AuthState {
   profile: UserProfile | null;
 }
 
+export type AuthAction = "google" | "demo" | "out";
+
+export interface AuthNotice {
+  tone: "info" | "warning";
+  message: string;
+}
+
+function getFirebaseAuthCode(error: unknown) {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    return String((error as { code?: unknown }).code);
+  }
+
+  return "";
+}
+
+export function getAuthNotice(error: unknown, action: AuthAction): AuthNotice {
+  const code = getFirebaseAuthCode(error);
+
+  if (code === "auth/popup-closed-by-user") {
+    return {
+      tone: "info",
+      message: "Sign-in cancelled. No account was connected.",
+    };
+  }
+
+  if (code === "auth/cancelled-popup-request") {
+    return {
+      tone: "info",
+      message: "A newer sign-in popup was opened. Continue with that window.",
+    };
+  }
+
+  if (code === "auth/popup-blocked") {
+    return {
+      tone: "warning",
+      message: "Popup blocked. Allow popups for this site, then try again.",
+    };
+  }
+
+  if (code === "auth/unauthorized-domain") {
+    return {
+      tone: "warning",
+      message:
+        "This domain is not authorized in Firebase Auth. Add it under Authorized domains.",
+    };
+  }
+
+  if (
+    code === "auth/admin-restricted-operation" ||
+    code === "auth/operation-not-allowed"
+  ) {
+    return {
+      tone: "warning",
+      message:
+        action === "demo"
+          ? "Demo sign-in is not enabled. Enable Anonymous sign-in in Firebase Auth, or use Google sign-in."
+          : "This sign-in provider is not enabled for this Firebase project.",
+    };
+  }
+
+  if (code === "auth/network-request-failed") {
+    return {
+      tone: "warning",
+      message: "Network issue during sign-in. Check your connection and retry.",
+    };
+  }
+
+  if (action === "out") {
+    return {
+      tone: "warning",
+      message: "Could not sign out. Please try again.",
+    };
+  }
+
+  return {
+    tone: "warning",
+    message: "Sign-in failed. Please try again.",
+  };
+}
+
 async function ensureProfileBestEffort(user: User) {
   try {
     return await ensureUserProfile(user);

@@ -1,29 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { Award, LogIn, LogOut, UserRound, UserRoundPlus } from "lucide-react";
+import {
+  AlertCircle,
+  Award,
+  Info,
+  LogIn,
+  LogOut,
+  UserRound,
+  UserRoundPlus,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  getAuthNotice,
   signInWithDemoAccount,
   signInWithGoogle,
   signOutUser,
   useAuthState,
+  type AuthAction,
+  type AuthNotice,
 } from "@/lib/firebase/auth";
 import { getUserLevel } from "@/lib/gamification/rules";
+import { cn } from "@/lib/utils";
 
 export function AuthButton() {
   const { configured, loading, user, profile } = useAuthState();
-  const [busy, setBusy] = useState<"google" | "demo" | "out" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<AuthAction | null>(null);
+  const [notice, setNotice] = useState<AuthNotice | null>(null);
   const avatarUrl = profile?.photoURL || user?.photoURL || "";
   const reputation = profile?.reputation ?? 0;
   const level = getUserLevel(reputation);
 
-  async function run(action: "google" | "demo" | "out") {
+  async function run(action: AuthAction) {
     setBusy(action);
-    setError(null);
+    setNotice(null);
 
     try {
       if (action === "google") {
@@ -34,11 +46,7 @@ export function AuthButton() {
         await signOutUser();
       }
     } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Authentication failed.",
-      );
+      setNotice(getAuthNotice(caughtError, action));
     } finally {
       setBusy(null);
     }
@@ -61,13 +69,10 @@ export function AuthButton() {
   }
 
   if (!user) {
+    const NoticeIcon = notice?.tone === "info" ? Info : AlertCircle;
+
     return (
-      <div className="flex items-center gap-2">
-        {error ? (
-          <Badge variant="warning" className="hidden xl:inline-flex">
-            {error}
-          </Badge>
-        ) : null}
+      <div className="relative flex items-center gap-2">
         <Button
           type="button"
           variant="outline"
@@ -89,6 +94,21 @@ export function AuthButton() {
           <LogIn />
           Sign in
         </Button>
+        {notice ? (
+          <div
+            role={notice.tone === "warning" ? "alert" : "status"}
+            aria-live="polite"
+            className={cn(
+              "absolute right-0 top-[calc(100%+0.5rem)] z-50 flex w-[min(22rem,calc(100vw-2rem))] items-start gap-2 rounded-md border px-3 py-2 text-xs font-medium shadow-glass backdrop-blur-xl",
+              notice.tone === "warning"
+                ? "border-amber-400/35 bg-background/95 text-amber-700 dark:text-amber-300"
+                : "border-sky-400/35 bg-background/95 text-sky-700 dark:text-sky-300",
+            )}
+          >
+            <NoticeIcon className="mt-0.5 size-3.5 shrink-0" />
+            <span className="leading-5">{notice.message}</span>
+          </div>
+        ) : null}
       </div>
     );
   }
