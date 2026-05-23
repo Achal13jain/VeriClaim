@@ -1,4 +1,4 @@
-# Hackathon Submission
+# Event Submission Notes
 
 ## Project Summary
 
@@ -10,7 +10,7 @@ cases, scores, and public proof-ready records.
 ## Links
 
 - Live demo: https://veri-claim-livid.vercel.app
-- GitHub repo: <add GitHub repository URL>
+- GitHub repo: https://github.com/Achal13jain/VeriClaim
 
 ## Key Features
 
@@ -30,7 +30,7 @@ VeriClaim is designed for Arc-native market infrastructure. A MarketSpec hash is
 the compact proof object that can be anchored to Arc while the full human-readable
 spec remains available in the app.
 
-Current MVP:
+Current implementation:
 
 - uses mock Arc proof publishing
 - stores Arc-ready proof metadata

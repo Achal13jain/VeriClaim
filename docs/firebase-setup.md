@@ -1,6 +1,6 @@
 # Firebase Setup
 
-VeriClaim uses Firebase Auth and Firestore for MVP persistence.
+VeriClaim uses Firebase Auth and Firestore for application persistence.
 
 ## 1. Create Project
 
@@ -88,7 +88,7 @@ firebase deploy --only firestore:rules
 The repo rule file is `firestore.rules`. If your local Firebase CLI says it
 cannot find `firebase.json`, run `firebase init firestore` and choose the
 existing `firestore.rules` file, or keep a local `firebase.json` deploy helper.
-The MVP repo does not require committing a project-specific `firebase.json`.
+The repository does not require committing a project-specific `firebase.json`.
 
 You can deploy without setting an active project by passing the project ID:
 
@@ -118,7 +118,7 @@ Security baseline:
 
 ## 6. Admins
 
-Privileged writes are denied from the client in this MVP. Future server/Admin
+Privileged writes are denied from the client in the current implementation. Future server/Admin
 tooling can create:
 
 ```text
@@ -138,5 +138,5 @@ Only existing admins can read admin docs. Admin writes are disabled from the cli
   best-effort `agent_runs` write only if local rules allow it.
 - Challenge rewards are applied through the client transaction helper until an
   Admin/API reward service is added.
-- Arc proof publishing and x402 payments currently use mock MVP flows; agent
-  registry writes remain UI/demo-only until server-side services are added.
+- Arc proof publishing and x402 payments currently use mock-mode flows; agent
+  registry writes remain mock-mode flows until server-side services are added.

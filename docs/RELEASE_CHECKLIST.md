@@ -1,6 +1,6 @@
 # Release Checklist
 
-Use this checklist before pushing a public hackathon demo branch or deploying to
+Use this checklist before pushing a public release branch or deploying to
 Vercel.
 
 ## Pre-Push Checks
@@ -12,8 +12,7 @@ Vercel.
 - Run `npm run lint`.
 - Run `npm run build`.
 - Review `README.md` for accurate mock/real wording.
-- Confirm `docs/AUDIT_REPORT.md` remains local unless you intentionally decide
-  to publish it.
+- Confirm `.env.example` contains empty sample values only.
 
 ## Environment Variables
 
@@ -80,7 +79,7 @@ firebase deploy --project <project-id> --only firestore:rules
 - Add Firebase public env vars.
 - Add AI provider env vars only if you want live AI instead of demo fallback.
 - Keep Arc contract, Foundry private key, and real x402 receiver vars unset for
-  the current MVP unless you are explicitly testing future integration work.
+  the current implementation unless you are explicitly testing future integration work.
 - Deploy and inspect Vercel build logs.
 
 ## Firebase Authorized Domains
@@ -90,7 +89,7 @@ and add:
 
 - `localhost`
 - Your Vercel production domain.
-- Any Vercel preview domain you will use during judging.
+- Any Vercel preview domain you will use for reviews or demos.
 
 If Google popup sign-in fails after deployment, this is the first place to check.
 
@@ -110,16 +109,16 @@ If Google popup sign-in fails after deployment, this is the first place to check
 - Exhaust free Forge uses or use an existing test user to show the mock x402
   unlock modal.
 
-## Known MVP Limitations
+## Known Limitations
 
 - Real betting and trading are intentionally not implemented.
 - Real financial advice is intentionally not provided.
 - Arc proof publishing is mock mode.
 - x402 payment is mock mode.
-- Forge unlock enforcement is primarily client-side in the current MVP.
+- Forge unlock enforcement is primarily client-side in the current implementation.
 - Credits, reputation, challenges, mock payments, and mock proof writes are not
   Firebase Admin-backed yet.
 - `agent_runs` browser writes are best-effort and may be denied by deployed
   rules; the trace is embedded in the saved spec.
-- Public spec pages do not yet have dynamic OpenGraph images or metadata.
-- Real ERC-8004 adapter integration is represented as product scaffolding only.
+- Public spec pages use generic OpenGraph metadata; per-spec images are planned.
+- Real ERC-8004 adapter integration is planned integration work.

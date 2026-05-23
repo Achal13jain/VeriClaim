@@ -1,9 +1,9 @@
 # x402 Integration
 
-VeriClaim's current MVP uses a clearly labeled mock x402 payment flow. It models
+VeriClaim currently uses a clearly labeled mock x402 payment flow. It models
 premium Forge unlocks without moving real money.
 
-## Current MVP Mode
+## Current Mode
 
 ```bash
 NEXT_PUBLIC_X402_MODE=mock
@@ -67,9 +67,9 @@ User documents track:
 }
 ```
 
-The client sends a Firebase ID token in the `Authorization` header. The MVP
-performs best-effort token ownership checks and relies on Firestore rules to
-ensure receipts are saved only by the signed-in owner.
+The client sends a Firebase ID token in the `Authorization` header. The current
+implementation performs best-effort token ownership checks and relies on
+Firestore rules to ensure receipts are saved only by the signed-in owner.
 
 ## Future Real x402 Path
 
@@ -92,6 +92,6 @@ while preserving the Forge unlock contract and Firestore history shape.
 - `X402_RECEIVER_ADDRESS` is reserved for later integration and is not exposed
   to the client.
 - Firebase Admin verification is deferred; Firestore rules remain the final
-  client-write boundary in the MVP.
-- `/api/forge` remains callable directly in the MVP; the Forge page enforces
+  client-write boundary in the current implementation.
+- `/api/forge` remains callable directly; the Forge page enforces
   free-use, Forge Credit, and mock x402 UX for the demo path.

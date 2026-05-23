@@ -1,6 +1,6 @@
 # Three-Minute Demo Script
 
-Use this flow for a same-day hackathon presentation.
+Use this flow for a concise product walkthrough.
 
 ## 0:00-0:20 - Landing Page
 
@@ -88,7 +88,7 @@ Point to:
 
 Click **Publish Proof on Arc**.
 
-"For this MVP, Arc publishing is a clearly labeled mock Testnet proof. It writes
+"For the current implementation, Arc publishing is a clearly labeled mock Testnet proof. It writes
 the same Firestore schema and user experience we will use for the real contract,
 but it does not pretend a real on-chain transaction happened."
 

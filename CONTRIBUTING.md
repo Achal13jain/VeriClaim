@@ -1,7 +1,7 @@
 # Contributing
 
-Thanks for taking an interest in VeriClaim. This project is a hackathon MVP for
-turning messy internet claims into structured MarketSpecs.
+Thanks for taking an interest in VeriClaim. This project turns messy internet
+claims into structured, reviewable MarketSpecs.
 
 ## Setup
 
@@ -81,4 +81,4 @@ Pull requests should include:
 - known limitations or follow-up work
 
 Avoid large rewrites unless the issue explicitly calls for them. Prefer small,
-reviewable changes that keep the MVP stable.
+reviewable changes that keep the project stable.

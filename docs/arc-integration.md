@@ -1,10 +1,10 @@
 # Arc Integration
 
-VeriClaim's current MVP uses a clearly labeled mock Arc Testnet proof flow. This
-keeps the demo complete without requiring Foundry, Forge, a deployed contract,
-or a wallet transaction during early review.
+VeriClaim currently uses a clearly labeled mock Arc Testnet proof flow. The app
+stores Arc-ready proof metadata now and keeps the real transaction path available
+for the next integration step.
 
-## Current MVP Mode
+## Current Mode
 
 On a saved `/spec/[hash]` page, an authenticated user can click **Publish Proof
 on Arc**. The app then:
@@ -26,8 +26,9 @@ on Arc**. The app then:
 4. Awards `+20` reputation and the `First Arc Proof` badge when applicable.
 5. Shows the proof as **Mock Testnet Proof** in the Arc proof panel.
 
-The UI must not present this as a real on-chain transaction. It is an MVP proof
-record that matches the intended Firestore schema and final user experience.
+The UI must not present this as a real on-chain transaction. It is a mock-mode
+proof record that matches the intended Firestore schema and final user
+experience.
 No wallet, RPC call, contract address, Foundry install, or testnet faucet is
 required for the current mock flow.
 
@@ -36,6 +37,14 @@ required for the current mock flow.
 - Chain ID: `5042002`
 - Native currency: `USDC`
 - Explorer: `https://testnet.arcscan.app`
+
+## Arc CLI
+
+Install the Arc CLI:
+
+```bash
+uv tool install git+https://github.com/the-canteen-dev/ARC-cli
+```
 
 ## Frontend Environment
 

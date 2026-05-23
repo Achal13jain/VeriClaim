@@ -1,7 +1,8 @@
 # Security
 
-VeriClaim is a hackathon MVP. It is designed to demonstrate a MarketSpec flow
-and Arc-ready architecture, not production custody, payment, or trading systems.
+VeriClaim is an early-stage open-source MarketSpec project. It is designed to
+prepare structured, reviewable prediction-market specs, not custody assets,
+process production payments, or run trading systems.
 
 ## Reporting Issues
 
@@ -26,9 +27,9 @@ Never commit:
 - wallet seed phrases
 - production credentials
 
-The repository includes `.env.example` for placeholder names only.
+The repository includes `.env.example` for sample variable names only.
 
-## Current MVP Limitations
+## Current Limitations
 
 - Firebase Admin SDK is not implemented yet.
 - Credits, reputation, mock payments, challenges, and mock proof writes are not

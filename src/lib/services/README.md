@@ -1,7 +1,7 @@
 # Service Adapter Notes
 
-The original UI shell kept this folder as a placeholder. The current MVP now
-uses focused adapter folders under `src/lib` instead:
+VeriClaim keeps service-specific code in focused adapter folders under
+`src/lib`:
 
 - `agents/` for Gemini, Groq, OpenAI/OpenRouter, validation, and demo fallback.
 - `firebase/` for Firebase Auth and Firestore client helpers.
@@ -10,5 +10,6 @@ uses focused adapter folders under `src/lib` instead:
 - `gamification/` for credits, reputation, levels, and badges.
 
 There is still no real betting, trading, financial advice, real x402 payment, or
-real on-chain Arc publish flow in the MVP. Production-only service work should
-prefer API routes backed by Firebase Admin SDK before tightening Firestore rules.
+real on-chain Arc publish flow in the current implementation. Production-only
+service work should prefer API routes backed by Firebase Admin SDK before
+tightening Firestore rules.

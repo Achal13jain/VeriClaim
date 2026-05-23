@@ -1,12 +1,27 @@
 # VeriClaim
 
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-orange)](https://firebase.google.com/)
+[![Arc](https://img.shields.io/badge/Arc-ready%20architecture-37c8ff)](https://testnet.arcscan.app/)
+[![x402](https://img.shields.io/badge/x402-mock%20mode-8b5cf6)](docs/x402-integration.md)
+
 VeriClaim turns messy internet claims into verifiable prediction-market specs
 using an adversarial AI agent flow.
 
-It is a MarketSpec infrastructure MVP: a tool for converting vague claims,
-rumors, announcements, and social posts into structured, auditable market
-definitions that can be reviewed, challenged, shared, and later anchored to
-proof infrastructure.
+It is a MarketSpec infrastructure project for converting vague claims, rumors,
+announcements, and social posts into structured, auditable market definitions
+that can be reviewed, challenged, shared, and later anchored to proof
+infrastructure.
+
+Live demo: https://veri-claim-livid.vercel.app
+
+Repository: https://github.com/Achal13jain/VeriClaim
+
+## Screenshots
+
+| Landing page | Forge workflow |
+| --- | --- |
+| ![VeriClaim landing page](public/screenshots/home.png) | ![VeriClaim Forge page](public/screenshots/forge.png) |
 
 ## Problem
 
@@ -28,7 +43,7 @@ MarketSpecs.
 5. The user can save the MarketSpec, share its public page, challenge it, and
    publish a mock Arc proof record.
 
-## Current MVP Features
+## Current Features
 
 - Forger, Critic, and Judge agent flow.
 - MarketSpec generation through `/api/forge`.
@@ -124,7 +139,7 @@ npm run build
 The app remains usable without live AI keys by falling back to deterministic demo
 responses. Firebase browser config is required for sign-in and persistence.
 
-Required for the interactive MVP:
+Required for the interactive app:
 
 ```bash
 NEXT_PUBLIC_APP_URL=
@@ -186,7 +201,7 @@ More detail is available in `docs/firebase-setup.md`.
 
 VeriClaim is designed for Arc-native market infrastructure.
 
-Current MVP:
+Current implementation:
 
 - uses mock Arc proof publishing
 - stores Arc-ready proof metadata
@@ -210,7 +225,7 @@ the frontend is connected to the registry address.
 
 ## x402
 
-Current MVP uses mock x402-style unlocks:
+Current implementation uses mock x402-style unlocks:
 
 - first 3 Forge generations are free
 - later Forge actions can use 1 Forge Credit or a mock unlock
@@ -226,9 +241,18 @@ Real x402 integration is planned later.
 - Credits, reputation, mock payments, challenges, and mock proof writes are not
   fully server-authoritative yet.
 - `/api/forge` is rate-limited in memory and can still be called directly.
-- Public spec pages do not yet have dynamic OpenGraph metadata.
+- Public spec pages use generic OpenGraph metadata; per-spec images are planned.
 - Agent identity and ERC-8004 adapter support are represented as planned
   integration work.
+
+## Additional Docs
+
+- `docs/ARCHITECTURE.md`
+- `docs/ARC_CLI_NOTES.md`
+- `docs/DEMO_SCRIPT.md`
+- `docs/firebase-setup.md`
+- `docs/arc-integration.md`
+- `docs/x402-integration.md`
 
 ## Roadmap
 
@@ -238,10 +262,10 @@ Real x402 integration is planned later.
 - Deploy the Arc Testnet registry contract.
 - Switch proof publishing from mock metadata to real Arc transactions.
 - Integrate real x402 facilitator support.
-- Add dynamic OpenGraph metadata for public spec pages.
+- Add per-spec OpenGraph images for public spec pages.
 - Persist agent identity metadata and expand ERC-8004 adapter support.
 - Add CI, browser smoke tests, and Foundry contract tests.
 
 ## License
 
-License details will be finalized before production release.
+MIT. See `LICENSE`.

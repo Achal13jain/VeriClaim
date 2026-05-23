@@ -8,12 +8,12 @@ Install the Arc CLI with:
 uv tool install git+https://github.com/the-canteen-dev/ARC-cli
 ```
 
-## Current MVP
+## Current Implementation
 
-The current MVP uses mock Arc proof publishing. It stores Arc-ready proof
+The current implementation uses mock Arc proof publishing. It stores Arc-ready proof
 metadata in Firestore and labels the result as mock mode in the UI.
 
-No real transaction is published to Arc in the current MVP.
+No real transaction is published to Arc yet.
 
 ## Future Arc Work
 
