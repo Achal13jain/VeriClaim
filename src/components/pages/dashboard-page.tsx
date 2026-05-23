@@ -79,7 +79,7 @@ function buildMetrics(specs: MarketSpecRecord[], loading: boolean): DashboardMet
     {
       label: "Challenged specs",
       value: loading ? "..." : formatNumber(challengedSpecs),
-      delta: "challengeCount or challenged status",
+      delta: "challenge signals",
       tone: "amber",
     },
     {

@@ -28,13 +28,18 @@ export function DashboardStats({ metrics }: { metrics: DashboardMetric[] }) {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: index * 0.06 }}
+            className="h-full"
           >
-            <Card className="glass-panel">
-              <CardContent className="flex items-center justify-between gap-4 p-5">
-                <div>
-                  <p className="text-sm text-muted-foreground">{metric.label}</p>
-                  <p className="mt-2 font-mono text-3xl">{metric.value}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+            <Card className="glass-panel h-full">
+              <CardContent className="flex min-h-[156px] items-center justify-between gap-5 p-5 sm:p-6">
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">
+                    {metric.label}
+                  </p>
+                  <p className="mt-2 font-mono text-3xl leading-none">
+                    {metric.value}
+                  </p>
+                  <p className="mt-3 max-w-[13rem] text-xs leading-5 text-muted-foreground">
                     {metric.delta}
                   </p>
                 </div>
