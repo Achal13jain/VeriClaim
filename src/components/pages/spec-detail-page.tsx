@@ -52,6 +52,7 @@ import {
 } from "@/lib/firebase/firestore";
 import type { MarketSpecRecord } from "@/lib/types";
 import { formatHash, statusLabel } from "@/lib/utils";
+import { getSpecUrlPath } from "@/lib/utils/slugify";
 
 const challengeCategories: ChallengeReasonCategory[] = [
   "Ambiguous wording",
@@ -87,7 +88,12 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
       return;
     }
 
-    await navigator.clipboard.writeText(window.location.href);
+    const shareUrl = new URL(
+      getSpecUrlPath(spec.hash, spec.slug),
+      window.location.origin,
+    ).toString();
+
+    await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1400);
   }

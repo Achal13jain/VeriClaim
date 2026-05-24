@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import type { MarketSpecRecord } from "@/lib/types";
 import { formatHash, statusLabel } from "@/lib/utils";
+import { getSpecUrlPath } from "@/lib/utils/slugify";
 
 const statusVariant = {
   blessed: "success",
@@ -96,7 +97,7 @@ export function MarketSpecCard({
           </span>
           {showOpen ? (
             <Button asChild variant="outline" size="sm">
-              <Link href={`/spec/${spec.hash}`}>
+              <Link href={getSpecUrlPath(spec.hash, spec.slug)}>
                 Open
                 <ArrowUpRight />
               </Link>

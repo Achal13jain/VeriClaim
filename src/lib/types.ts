@@ -63,6 +63,7 @@ export interface AgentTraceStep {
 
 export interface MarketSpecRecord {
   hash: string;
+  slug?: string;
   sourceClaim: string;
   canonicalClaim: string;
   sourceType: SourceType;

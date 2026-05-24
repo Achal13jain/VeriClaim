@@ -57,6 +57,7 @@ import type {
   MarketSpecRecord,
   SourceType,
 } from "@/lib/types";
+import { getSpecUrlPath, slugify } from "@/lib/utils/slugify";
 
 const forgePhases: Array<{
   event: string;
@@ -176,6 +177,7 @@ function responseToRecord(
 ): MarketSpecRecord {
   return {
     hash: hashOverride ?? makeDisplayHash(JSON.stringify(response)),
+    slug: slugify(response.market_spec.question),
     sourceClaim: response.source_claim,
     canonicalClaim: response.canonical_claim,
     sourceType: response.source_type,
@@ -777,7 +779,7 @@ export function ForgePage() {
                         variant="link"
                         className="ml-2 h-auto p-0 text-emerald-700 dark:text-emerald-300"
                       >
-                        <Link href={`/spec/${savedHash}`}>
+                        <Link href={getSpecUrlPath(savedHash, previewSpec.slug)}>
                           Open public page
                           <ExternalLink />
                         </Link>

@@ -34,6 +34,7 @@ import {
 import { createForgeCreditPayment } from "@/lib/payments/mockPayment";
 import { FREE_FORGE_LIMIT, type PaymentRecord } from "@/lib/payments/types";
 import { hashMarketSpec } from "@/lib/utils/hashMarketSpec";
+import { slugify } from "@/lib/utils/slugify";
 import type {
   ActivityEvent,
   AgentTraceStep,
@@ -349,6 +350,7 @@ function normalizeTraceStep(step: unknown): AgentTraceStep {
 function normalizeSpec(data: DocumentData): MarketSpecRecord {
   return {
     hash: String(data.hash),
+    slug: typeof data.slug === "string" ? data.slug : undefined,
     sourceClaim: String(data.sourceClaim ?? ""),
     canonicalClaim: String(data.canonicalClaim ?? ""),
     sourceType: data.sourceType,
@@ -1040,6 +1042,7 @@ export async function saveMarketSpec(spec: MarketSpecRecord, user: User): Promis
       const specToSave: MarketSpecRecord = {
         ...spec,
         hash,
+        slug: spec.slug ?? slugify(spec.marketSpec.question),
         createdBy: user.uid,
         createdAt,
         arcPublished: false,
