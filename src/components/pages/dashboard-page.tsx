@@ -58,7 +58,7 @@ function isBlessedSpec(spec: MarketSpecRecord) {
   );
 }
 
-function buildMetrics(specs: MarketSpecRecord[], loading: boolean): DashboardMetric[] {
+function buildMetrics(specs: MarketSpecRecord[]): DashboardMetric[] {
   const totalSpecs = specs.length;
   const blessedSpecs = specs.filter(isBlessedSpec).length;
   const challengedSpecs = specs.filter(
@@ -69,26 +69,26 @@ function buildMetrics(specs: MarketSpecRecord[], loading: boolean): DashboardMet
   return [
     {
       label: "Total specs",
-      value: loading ? "..." : formatNumber(totalSpecs),
+      value: formatNumber(totalSpecs),
       delta: firebaseReady() ? "from Firestore" : "Firebase not configured",
       tone: "blue",
     },
     {
       label: "Blessed specs",
-      value: loading ? "..." : formatNumber(blessedSpecs),
+      value: formatNumber(blessedSpecs),
       delta: `${totalSpecs ? Math.round((blessedSpecs / totalSpecs) * 100) : 0}% blessing rate`,
       tone: "green",
     },
     {
       label: "Challenged specs",
-      value: loading ? "..." : formatNumber(challengedSpecs),
+      value: formatNumber(challengedSpecs),
       delta: "challenge signals",
       tone: "amber",
     },
     {
       label: "Arc proofs",
-      value: loading ? "..." : formatNumber(arcProofs),
-      delta: "published on Arc",
+      value: formatNumber(arcProofs),
+      delta: "Mock Arc proofs",
       tone: "violet",
     },
   ];
@@ -214,7 +214,7 @@ export function DashboardPage() {
     };
   }, [user]);
 
-  const metrics = useMemo(() => buildMetrics(specs, loading), [loading, specs]);
+  const metrics = useMemo(() => buildMetrics(specs), [specs]);
   const chartData = useMemo(() => buildChartData(specs), [specs]);
   const recentActivity = useMemo(() => buildRecentActivity(specs), [specs]);
   const blessedSpecs = useMemo(
@@ -252,6 +252,7 @@ export function DashboardPage() {
             <Badge variant="glass">
               {firebaseReady() ? "Firestore analytics" : "Firebase not configured"}
             </Badge>
+            {!user ? <Badge variant="glass">Public preview</Badge> : null}
           </div>
           <h1 className="font-display text-5xl leading-none sm:text-6xl">
             Dashboard.
@@ -292,7 +293,7 @@ export function DashboardPage() {
         </Card>
       ) : null}
 
-      <DashboardStats metrics={metrics} />
+      <DashboardStats metrics={metrics} loading={loading} />
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="glass-panel">

@@ -224,8 +224,8 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
             <span className="font-mono text-foreground">
               {formatHash(spec.hash)}
             </span>
-            . The current implementation saves a clearly labeled mock Arc
-            Testnet proof while the real contract path remains planned.
+            . Saved specs can publish a clearly labeled Mock Arc proof while
+            real Arc contract publishing remains planned.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button type="button" variant="court" onClick={copyShareLink}>
@@ -589,8 +589,8 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
                 reputation in the SRS gameplay loop.
               </p>
               <p>
-                This foundation keeps the economy mocked and visually separate
-                from the one-time x402 unlock state.
+                Forge Credits are in-app MVP credits. Mock x402 unlocks remain
+                visually separate and do not move real money.
               </p>
             </CardContent>
           </Card>

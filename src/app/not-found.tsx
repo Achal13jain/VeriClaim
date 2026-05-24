@@ -11,12 +11,12 @@ export default function NotFound() {
           This MarketSpec is outside the court record.
         </h1>
         <p className="text-muted-foreground">
-          The current foundation uses mock public specs only. Live Firestore
-          lookup will arrive in a later phase.
+          This public MarketSpec could not be found in Firestore. Explore the
+          gallery or forge a new spec to create a shareable proof page.
         </p>
       </div>
       <Button asChild variant="court">
-        <Link href="/specs">Explore mock specs</Link>
+        <Link href="/specs">Explore specs</Link>
       </Button>
     </main>
   );

@@ -16,7 +16,13 @@ const toneClass = {
 
 const icons = [BadgeCheck, ShieldCheck, Activity, Coins];
 
-export function DashboardStats({ metrics }: { metrics: DashboardMetric[] }) {
+export function DashboardStats({
+  metrics,
+  loading = false,
+}: {
+  metrics: DashboardMetric[];
+  loading?: boolean;
+}) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {metrics.map((metric, index) => {
@@ -36,9 +42,13 @@ export function DashboardStats({ metrics }: { metrics: DashboardMetric[] }) {
                   <p className="text-sm text-muted-foreground">
                     {metric.label}
                   </p>
-                  <p className="mt-2 font-mono text-3xl leading-none">
-                    {metric.value}
-                  </p>
+                  {loading ? (
+                    <div className="mt-3 h-8 w-16 animate-pulse rounded-md bg-muted/70" />
+                  ) : (
+                    <p className="mt-2 font-mono text-3xl leading-none">
+                      {metric.value}
+                    </p>
+                  )}
                   <p className="mt-3 max-w-[13rem] text-xs leading-5 text-muted-foreground">
                     {metric.delta}
                   </p>

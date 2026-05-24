@@ -129,6 +129,7 @@ export function LandingPage() {
                 <Sparkles className="size-3.5" />
                 AI Court
               </Badge>
+              <Badge variant="glass">Demo preview</Badge>
               <ArcProofBadge
                 published={featuredSpec.arcPublished}
                 txHash={featuredSpec.arcTxHash}
@@ -146,7 +147,9 @@ export function LandingPage() {
               data-testid="landing-hero-subtitle"
             >
               VeriClaim uses adversarial AI agents to forge, critique, and
-              validate prediction-market specs, then prepares Arc proof records.
+              validate prediction-market specs. It supports live AI generation,
+              Firebase persistence, public proof pages, and demo-safe Arc/x402
+              mock flows for the MVP.
             </p>
             <div
               className="mt-7 flex flex-wrap justify-center gap-3 sm:mt-8"
@@ -185,7 +188,7 @@ export function LandingPage() {
               <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
                 <div className="space-y-4">
                   <div>
-                    <p className="section-eyebrow">Live court preview</p>
+                    <p className="section-eyebrow">Demo court preview</p>
                     <h2 className="mt-2 font-display text-2xl leading-tight sm:text-3xl">
                       Three agents, one settlement-ready spec.
                     </h2>
@@ -279,6 +282,7 @@ export function LandingPage() {
             VeriClaim preserves deadlines, thresholds, sources, and resolution
             rules so generated specs can be reviewed, challenged, and shared.
           </p>
+          <Badge variant="glass">Example MarketSpec</Badge>
           <SampleClaimChips />
           <div className="grid gap-4 sm:grid-cols-3">
             <Card className="glass-panel">
@@ -320,7 +324,7 @@ export function LandingPage() {
         <div className="page-shell">
           <div className="court-pin grid min-h-[72vh] gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
             <div className="space-y-5">
-              <p className="section-eyebrow">AI Court</p>
+              <p className="section-eyebrow">Sample court trace</p>
               <h2 className="font-display text-4xl leading-tight sm:text-5xl">
                 Forged, challenged, ruled, anchored.
               </h2>
@@ -332,7 +336,7 @@ export function LandingPage() {
                 <ReputationBadge reputation={2839} label="Court rep" />
                 <Badge variant="blue" className="gap-1.5">
                   <ShieldCheck className="size-3.5" />
-                  Arc testnet ready
+                  Mock Arc proof ready
                 </Badge>
               </div>
             </div>
@@ -348,7 +352,7 @@ export function LandingPage() {
       <section className="page-shell">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="section-eyebrow">Public proof pages</p>
+            <p className="section-eyebrow">Example public proof pages</p>
             <h2 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">
               Browse market specs that are built to be challenged.
             </h2>

@@ -85,9 +85,10 @@ export function AuthButton() {
 
   if (loading) {
     return (
-      <Badge variant="glass" className="hidden sm:inline-flex">
-        Auth loading
-      </Badge>
+      <span
+        aria-hidden="true"
+        className="hidden h-9 w-20 animate-pulse rounded-md border border-border/70 bg-card/60 sm:inline-block"
+      />
     );
   }
 

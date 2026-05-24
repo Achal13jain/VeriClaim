@@ -78,7 +78,7 @@ export function ArcProofPanel({ spec }: { spec: MarketSpecRecord }) {
         ) : null}
         <p className="rounded-md border border-court-violet/25 bg-court-violet/10 p-3 text-xs leading-5 text-muted-foreground">
           {isMockProof
-            ? "Mock proof record. Real contract publishing is a planned upgrade."
+            ? "Mock Arc proof record for the MVP. No real on-chain transaction is claimed; real contract publishing is planned."
             : "Only hashes and metadata references belong on Arc; full claim text stays in Firestore."}
         </p>
       </CardContent>

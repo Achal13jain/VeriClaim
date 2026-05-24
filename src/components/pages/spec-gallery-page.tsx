@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FileSearch, Filter, ListFilter, Loader2, SlidersHorizontal } from "lucide-react";
+import { FileSearch, Filter, ListFilter, SlidersHorizontal } from "lucide-react";
 
 import { MarketSpecCard } from "@/components/vericlaim/market-spec-card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,28 @@ const sortModes: Array<{ value: SortMode; label: string }> = [
   { value: "challenged", label: "Most challenged" },
   { value: "rewarded", label: "Most rewarded" },
 ];
+
+function SpecCardSkeleton() {
+  return (
+    <Card className="glass-panel">
+      <CardContent className="space-y-5 p-5">
+        <div className="flex gap-2">
+          <div className="h-6 w-24 animate-pulse rounded-md bg-muted/70" />
+          <div className="h-6 w-20 animate-pulse rounded-md bg-muted/50" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-7 w-full animate-pulse rounded-md bg-muted/70" />
+          <div className="h-7 w-4/5 animate-pulse rounded-md bg-muted/60" />
+          <div className="h-7 w-3/5 animate-pulse rounded-md bg-muted/50" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="h-20 animate-pulse rounded-md bg-muted/50" />
+          <div className="h-20 animate-pulse rounded-md bg-muted/50" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function SpecGalleryPage() {
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -139,7 +161,7 @@ export function SpecGalleryPage() {
           </p>
         </div>
         <Badge variant="success">
-          {loading ? "Loading specs" : `${specs.length} specs visible`}
+          {loading ? "Loading public specs" : `${specs.length} specs visible`}
         </Badge>
       </section>
 
@@ -215,16 +237,21 @@ export function SpecGalleryPage() {
       </Card>
 
       {loading ? (
-        <Card className="glass-panel">
-          <CardContent className="flex items-center gap-3 p-6 text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            Loading public MarketSpecs from Firestore.
-          </CardContent>
-        </Card>
+        <section className="grid gap-5 lg:grid-cols-3" aria-label="Loading specs">
+          {Array.from({ length: 6 }, (_, index) => (
+            <SpecCardSkeleton key={index} />
+          ))}
+        </section>
       ) : loadError ? (
         <Card className="glass-panel">
-          <CardContent className="p-6 text-sm text-destructive">
-            {loadError}
+          <CardContent className="flex flex-col items-start gap-3 p-6">
+            <FileSearch className="size-6 text-court-amber" />
+            <div>
+              <p className="font-semibold">Public specs could not load.</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {loadError}
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : specs.length === 0 ? (

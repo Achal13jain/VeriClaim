@@ -102,12 +102,12 @@ export function PublishProofButton({
         {publishing ? (
           <>
             <Loader2 className="animate-spin" />
-            Publishing proof to Arc...
+            Publishing mock Arc proof...
           </>
         ) : (
           <>
             <Sparkles />
-            Publish Proof on Arc
+            Publish Mock Arc Proof
           </>
         )}
       </Button>
