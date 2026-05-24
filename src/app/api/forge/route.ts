@@ -12,7 +12,7 @@ const RATE_LIMIT_MAX = 30;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function safeHeaderValue(value: string) {
-  return value.replace(/[\r\n]+/g, " ").slice(0, 500);
+  return value.replace(/[^\t\x20-\x7e\x80-\xff]+/g, " ").slice(0, 500);
 }
 
 function getClientId(request: NextRequest) {

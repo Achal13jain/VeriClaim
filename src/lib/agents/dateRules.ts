@@ -9,6 +9,40 @@ export interface ReferenceDateContext {
   beforeQ4CurrentYear: string;
 }
 
+export interface ExplicitDeadline {
+  deadline: string;
+  display: string;
+  matchedText: string;
+  reason: string;
+}
+
+const monthIndexByName: Record<string, number> = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11,
+};
+
 function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
@@ -54,6 +88,77 @@ export function longDate(isoDate: string) {
     year: "numeric",
     timeZone: "UTC",
   }).format(date);
+}
+
+function validIsoFromParts(year: number, month: number, day: number) {
+  const date = utcDate(year, month - 1, day);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return toIsoDate(date);
+}
+
+function explicitDeadlineResult(deadline: string, matchedText: string) {
+  return {
+    deadline,
+    display: longDate(deadline),
+    matchedText: matchedText.trim(),
+    reason: `The claim contains an explicit deadline "${matchedText.trim()}", so the MarketSpec deadline must be ${deadline}.`,
+  } satisfies ExplicitDeadline;
+}
+
+export function extractExplicitDeadline(claim: string): ExplicitDeadline | null {
+  const deadlinePrefix =
+    String.raw`\b(?:before|by|until|through|no later than|on or before|deadline(?:\s+is|\s*:)?|settles?\s+by)\s+`;
+  const isoMatch = claim.match(
+    new RegExp(`${deadlinePrefix}(\\d{4})-(\\d{1,2})-(\\d{1,2})\\b`, "i"),
+  );
+
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    const day = Number(isoMatch[3]);
+    const deadline = validIsoFromParts(year, month, day);
+
+    if (deadline) {
+      return explicitDeadlineResult(deadline, isoMatch[0]);
+    }
+  }
+
+  const monthNamePattern =
+    String.raw`(jan(?:uary)?\.?|feb(?:ruary)?\.?|mar(?:ch)?\.?|apr(?:il)?\.?|may|jun(?:e)?\.?|jul(?:y)?\.?|aug(?:ust)?\.?|sep(?:t(?:ember)?|tember)?\.?|oct(?:ober)?\.?|nov(?:ember)?\.?|dec(?:ember)?\.?)`;
+  const namedDateMatch = claim.match(
+    new RegExp(
+      `${deadlinePrefix}${monthNamePattern}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*,?\\s*(\\d{4})\\b`,
+      "i",
+    ),
+  );
+
+  if (namedDateMatch) {
+    const normalizedMonth = namedDateMatch[1]
+      .toLowerCase()
+      .replace(/\.$/, "")
+      .slice(0, 3);
+    const monthIndex = monthIndexByName[normalizedMonth];
+    const day = Number(namedDateMatch[2]);
+    const year = Number(namedDateMatch[3]);
+
+    if (monthIndex !== undefined) {
+      const deadline = validIsoFromParts(year, monthIndex + 1, day);
+
+      if (deadline) {
+        return explicitDeadlineResult(deadline, namedDateMatch[0]);
+      }
+    }
+  }
+
+  return null;
 }
 
 export function inferRelativeDeadline(
