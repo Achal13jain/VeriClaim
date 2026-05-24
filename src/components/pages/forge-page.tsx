@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
@@ -46,6 +47,7 @@ import {
   firebaseReady,
   saveMarketSpec,
   saveMockPaymentUnlock,
+  STARTING_FORGE_CREDITS,
   spendForgeCreditForUnlock,
 } from "@/lib/firebase/firestore";
 import { featuredSpec } from "@/lib/mock-data";
@@ -57,6 +59,10 @@ import type {
   MarketSpecRecord,
   SourceType,
 } from "@/lib/types";
+import {
+  getSafeForgeWarning,
+  toSafeClientError,
+} from "@/lib/utils/safeMessages";
 import { getSpecUrlPath, slugify } from "@/lib/utils/slugify";
 
 const forgePhases: Array<{
@@ -272,6 +278,7 @@ function recordToPreviewResponse(spec: MarketSpecRecord): ForgeResponse {
 }
 
 export function ForgePage() {
+  const router = useRouter();
   const { configured, user, profile } = useAuthState();
   const [claim, setClaim] = useState(featuredSpec.sourceClaim);
   const [sourceType, setSourceType] = useState<SourceType>("manual");
@@ -335,6 +342,10 @@ export function ForgePage() {
           ? "credit"
           : "required";
 
+  function requireLogin(next = "/forge") {
+    router.push(`/login?next=${encodeURIComponent(next)}`);
+  }
+
   async function executeForge() {
     setIsForging(true);
     setPhaseIndex(0);
@@ -377,15 +388,21 @@ export function ForgePage() {
       setResponseMode(
         response.headers.get("x-vericlaim-mode") === "live" ? "live" : "demo",
       );
-      setModeWarning(response.headers.get("x-vericlaim-warning"));
+      setModeWarning(
+        getSafeForgeWarning(
+          response.headers.get("x-vericlaim-warning"),
+          response.headers.get("x-vericlaim-mode"),
+        ),
+      );
       setSaveMessage(null);
       setSavedHash(null);
       setPhaseIndex(3);
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "The AI Court failed unexpectedly.",
+        toSafeClientError(
+          caughtError,
+          "The AI Court could not complete this request. VeriClaim will keep your claim intact; please try again.",
+        ),
       );
       setPhaseIndex(3);
     } finally {
@@ -404,7 +421,7 @@ export function ForgePage() {
     }
 
     if (!user) {
-      setError("Sign in with Google or demo auth before using metered Forge.");
+      requireLogin("/forge");
       return;
     }
 
@@ -421,9 +438,10 @@ export function ForgePage() {
         await executeForge();
       } catch (caughtError) {
         setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "Could not unlock this free Forge run.",
+          toSafeClientError(
+            caughtError,
+            "Could not unlock this free Forge run. Check sign-in and try again.",
+          ),
         );
       } finally {
         setUnlockBusy(null);
@@ -436,7 +454,7 @@ export function ForgePage() {
 
   async function runForgeAfterCreditUnlock() {
     if (!user) {
-      setError("Sign in before spending Forge Credits.");
+      requireLogin("/forge");
       return;
     }
 
@@ -456,9 +474,10 @@ export function ForgePage() {
       await executeForge();
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not spend this Forge Credit.",
+        toSafeClientError(
+          caughtError,
+          "Could not spend this Forge Credit. Check sign-in and try again.",
+        ),
       );
     } finally {
       setUnlockBusy(null);
@@ -467,7 +486,7 @@ export function ForgePage() {
 
   async function runForgeAfterMockPayment() {
     if (!user) {
-      setError("Sign in before using mock x402.");
+      requireLogin("/forge");
       return;
     }
 
@@ -516,9 +535,10 @@ export function ForgePage() {
       await executeForge();
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not complete the mock x402 payment.",
+        toSafeClientError(
+          caughtError,
+          "Could not complete the mock x402 payment. Check sign-in and try again.",
+        ),
       );
     } finally {
       setUnlockBusy(null);
@@ -548,7 +568,7 @@ export function ForgePage() {
     }
 
     if (!user) {
-      setError("Sign in with Google or demo auth before saving a MarketSpec.");
+      requireLogin("/forge");
       return;
     }
 
@@ -578,9 +598,10 @@ export function ForgePage() {
       window.setTimeout(() => setRewardToast(null), 3200);
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not save MarketSpec.",
+        toSafeClientError(
+          caughtError,
+          "Could not save MarketSpec. Check sign-in, Firestore access, or browser privacy settings.",
+        ),
       );
     } finally {
       setIsSaving(false);
@@ -634,7 +655,7 @@ export function ForgePage() {
         <div className="flex flex-wrap gap-2">
           <Badge variant="success" className="gap-1.5">
             <Coins className="size-3.5" />
-            {profile ? creditBalance : 100} Forge Credits
+            {profile ? creditBalance : STARTING_FORGE_CREDITS} Forge Credits
           </Badge>
           <Badge variant="blue" className="gap-1.5">
             <BadgeDollarSign className="size-3.5" />
@@ -705,9 +726,20 @@ export function ForgePage() {
                   {freeForgesUsed}/{FREE_FORGE_LIMIT} free used
                 </Badge>
               </div>
-              VeriClaim currently uses mock x402. Real payment support is
-              planned, and no real money moves.
+              You get 3 free forges. After that, use 1 Forge Credit or a mock
+              x402 unlock. Real payments are planned; no real money moves.
             </div>
+
+            {configured && firebaseReady() && !user ? (
+              <div className="rounded-md border border-sky-400/30 bg-sky-400/10 p-3 text-sm leading-6 text-sky-700 dark:text-sky-300">
+                Sign in to forge your own MarketSpec, save it publicly, and
+                build reputation. Sample outputs remain visible without an
+                account.
+                <Button asChild variant="link" className="ml-1 h-auto p-0 text-sky-700 dark:text-sky-300">
+                  <Link href="/login?next=/forge">Sign in</Link>
+                </Button>
+              </div>
+            ) : null}
 
             {error ? (
               <div className="flex gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">

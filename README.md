@@ -60,7 +60,7 @@ MarketSpecs.
 - Credits, reputation, user levels, badges, and activity feed.
 - Dashboard with stats, leaderboard, recent activity, and payment history.
 - Mock Arc proof publishing.
-- Mock x402-style unlock flow after free Forge generations.
+- 3 free Forge generations, then Forge Credits or mock x402-style unlocks.
 
 ## Safety Boundaries
 
@@ -70,6 +70,7 @@ MarketSpecs.
 - VeriClaim only creates structured MarketSpecs.
 - Mock Arc proof publishing is labeled as mock/testnet metadata.
 - Mock x402 unlocks do not move real money.
+- New profiles start with 10 Forge Credits.
 
 ## Tech Stack
 
@@ -206,6 +207,7 @@ Current implementation:
 - uses mock Arc proof publishing
 - stores Arc-ready proof metadata
 - does not yet publish real transactions to Arc
+- hides wallet connection until real Arc publishing is enabled
 
 Install the Arc CLI:
 

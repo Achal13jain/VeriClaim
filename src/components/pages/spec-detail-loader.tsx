@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getSpecByHash } from "@/lib/firebase/firestore";
 import { mockMarketSpecs } from "@/lib/mock-data";
 import type { MarketSpecRecord } from "@/lib/types";
+import { toSafeClientError } from "@/lib/utils/safeMessages";
 
 export function SpecDetailLoader({ hash }: { hash: string }) {
   const [spec, setSpec] = useState<MarketSpecRecord | null>(null);
@@ -34,9 +35,10 @@ export function SpecDetailLoader({ hash }: { hash: string }) {
       } catch (caughtError) {
         if (active) {
           setError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Could not load this MarketSpec.",
+            toSafeClientError(
+              caughtError,
+              "Could not load this MarketSpec. Check the link and try again.",
+            ),
           );
         }
       } finally {

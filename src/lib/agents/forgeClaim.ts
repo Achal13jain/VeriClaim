@@ -36,6 +36,10 @@ import {
   type ForgerModelOutput,
   type JudgeModelOutput,
 } from "@/lib/agents/schemas";
+import {
+  PUBLIC_DEMO_FALLBACK_WARNING,
+  PUBLIC_QUALITY_REPAIR_WARNING,
+} from "@/lib/utils/safeMessages";
 
 export interface ForgeClaimResult {
   response: ForgeResponse;
@@ -1111,11 +1115,11 @@ export async function forgeClaim(input: ForgeRequest): Promise<ForgeClaimResult>
     return {
       response: repairMarketSpecQuality(
         input,
-        createDemoForgeResponse(input, config.reason),
+        createDemoForgeResponse(input, PUBLIC_DEMO_FALLBACK_WARNING),
         referenceDate,
       ),
       mode: "demo",
-      warning: config.reason,
+      warning: PUBLIC_DEMO_FALLBACK_WARNING,
     };
   }
 
@@ -1187,8 +1191,7 @@ export async function forgeClaim(input: ForgeRequest): Promise<ForgeClaimResult>
         return {
           response: repaired,
           mode: "live",
-          warning:
-            "AI Court response was deterministically repaired for deadline and resolution quality.",
+          warning: PUBLIC_QUALITY_REPAIR_WARNING,
         };
       }
 
@@ -1201,20 +1204,20 @@ export async function forgeClaim(input: ForgeRequest): Promise<ForgeClaimResult>
       `AI Court failed semantic validation after retry:\n${semanticFeedback}`,
     );
   } catch (error) {
-    const warning =
+    const internalWarning =
       error instanceof Error
         ? `Live AI Court failed: ${error.message}`
         : "Live AI Court failed for an unknown reason.";
 
-    console.warn(warning);
+    console.warn(internalWarning);
     return {
       response: repairMarketSpecQuality(
         input,
-        createDemoForgeResponse(input, warning),
+        createDemoForgeResponse(input, PUBLIC_DEMO_FALLBACK_WARNING),
         referenceDate,
       ),
       mode: "demo",
-      warning,
+      warning: PUBLIC_DEMO_FALLBACK_WARNING,
     };
   }
 }

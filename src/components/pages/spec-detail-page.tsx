@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -52,6 +53,7 @@ import {
 } from "@/lib/firebase/firestore";
 import type { MarketSpecRecord } from "@/lib/types";
 import { formatHash, statusLabel } from "@/lib/utils";
+import { toSafeClientError } from "@/lib/utils/safeMessages";
 import { getSpecUrlPath } from "@/lib/utils/slugify";
 
 const challengeCategories: ChallengeReasonCategory[] = [
@@ -65,6 +67,7 @@ const challengeCategories: ChallengeReasonCategory[] = [
 ];
 
 export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }) {
+  const router = useRouter();
   const { configured, user } = useAuthState();
   const [spec, setSpec] = useState(initialSpec);
   const [copied, setCopied] = useState(false);
@@ -105,7 +108,7 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
     }
 
     if (!user) {
-      setChallengeError("Sign in with Google or demo auth before challenging.");
+      router.push(`/login?next=${encodeURIComponent(getSpecUrlPath(spec.hash, spec.slug))}`);
       return;
     }
 
@@ -166,9 +169,10 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
       window.setTimeout(() => setRewardToast(null), 3200);
     } catch (caughtError) {
       setChallengeError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not save this challenge.",
+        toSafeClientError(
+          caughtError,
+          "Could not complete this challenge. Check sign-in and try again.",
+        ),
       );
     } finally {
       setIsChallenging(false);
@@ -234,7 +238,16 @@ export function SpecDetailPage({ spec: initialSpec }: { spec: MarketSpecRecord }
             <Button
               type="button"
               variant="outline"
-              onClick={() => setChallengeOpen(true)}
+              onClick={() => {
+                if (!user) {
+                  router.push(
+                    `/login?next=${encodeURIComponent(getSpecUrlPath(spec.hash, spec.slug))}`,
+                  );
+                  return;
+                }
+
+                setChallengeOpen(true);
+              }}
             >
               <MessageSquareWarning />
               Challenge this spec

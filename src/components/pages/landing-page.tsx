@@ -40,6 +40,34 @@ const marketSpecJson = {
   scores: featuredSpec.scores,
 };
 
+const courtAgentDetails: Record<
+  string,
+  { icon: typeof Gavel; detail: string }
+> = {
+  forger: {
+    icon: Sparkles,
+    detail: "Transforms messy claims into binary, time-bound MarketSpecs.",
+  },
+  critic: {
+    icon: FileJson2,
+    detail:
+      "Attacks ambiguity, weak sources, vague deadlines, and bad resolution rules.",
+  },
+  judge: {
+    icon: Gavel,
+    detail:
+      "Produces the final verdict, score, and settlement-ready resolution rule.",
+  },
+};
+
+const howItWorks = [
+  "Submit a claim",
+  "AI Court creates a MarketSpec",
+  "Critic finds ambiguity",
+  "Judge finalizes verdict",
+  "Save, challenge, or publish mock Arc proof",
+];
+
 export function LandingPage() {
   const courtRef = useRef<HTMLElement | null>(null);
 
@@ -163,23 +191,40 @@ export function LandingPage() {
                     </h2>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                    {mockAgents.map((agent) => (
-                      <div
-                        key={agent.agentId}
-                        className="court-scan min-h-28 rounded-lg border border-white/15 bg-white/10 p-4 backdrop-blur-xl"
-                      >
-                        <div className="font-mono text-xs uppercase text-muted-foreground">
-                          {agent.role}
+                    {mockAgents.map((agent) => {
+                      const detail = courtAgentDetails[agent.role];
+                      const Icon = detail?.icon ?? Sparkles;
+
+                      return (
+                        <div
+                          key={agent.agentId}
+                          className="court-scan min-h-40 rounded-lg border border-white/15 bg-white/10 p-4 backdrop-blur-xl"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="font-mono text-xs uppercase text-muted-foreground">
+                              {agent.role}
+                            </div>
+                            <Icon className="size-4 text-court-blue" />
+                          </div>
+                          <div className="mt-3 font-semibold">{agent.name}</div>
+                          <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                            {detail?.detail}
+                          </p>
+                          <div className="mt-4 h-1.5 rounded-full bg-white/20">
+                            <div
+                              className="h-full rounded-full bg-court-green"
+                              style={{ width: `${agent.winRate}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="mt-2 font-semibold">{agent.name}</div>
-                        <div className="mt-4 h-1.5 rounded-full bg-white/20">
-                          <div
-                            className="h-full rounded-full bg-court-green"
-                            style={{ width: `${agent.winRate}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-background/60 p-3 text-xs leading-5 text-muted-foreground">
+                    Claim <ArrowRight className="mx-1 inline size-3" /> Forger{" "}
+                    <ArrowRight className="mx-1 inline size-3" /> Critic{" "}
+                    <ArrowRight className="mx-1 inline size-3" /> Judge{" "}
+                    <ArrowRight className="mx-1 inline size-3" /> MarketSpec
                   </div>
                 </div>
 
@@ -192,6 +237,38 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className="page-shell py-14 sm:py-16">
+        <div className="mb-8 max-w-3xl space-y-4">
+          <p className="section-eyebrow">How it works</p>
+          <h2 className="font-display text-4xl leading-tight sm:text-5xl">
+            From claim to public MarketSpec in one court flow.
+          </h2>
+          <p className="text-muted-foreground">
+            VeriClaim structures market-ready specifications only. It does not
+            create betting markets, execute trades, or provide financial advice.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-5">
+          {howItWorks.map((step, index) => (
+            <div
+              key={step}
+              className="rounded-lg border border-border/70 bg-card/55 p-4"
+            >
+              <div className="mb-4 flex size-8 items-center justify-center rounded-md border border-sky-400/30 bg-sky-400/12 font-mono text-sm text-sky-700 dark:text-sky-300">
+                {index + 1}
+              </div>
+              <p className="text-sm font-semibold leading-6">{step}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Badge variant="glass">No betting</Badge>
+          <Badge variant="glass">No trading</Badge>
+          <Badge variant="glass">No financial advice</Badge>
+          <Badge variant="blue">MarketSpec creation only</Badge>
+        </div>
+      </section>
+
       <section className="page-shell grid gap-8 py-14 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:py-20">
         <div className="space-y-6">
           <p className="section-eyebrow">Messy input to proof-ready spec</p>
@@ -199,9 +276,8 @@ export function LandingPage() {
             The court turns vague claims into settlement-grade JSON.
           </h2>
           <p className="text-muted-foreground">
-            The foundation ships with deterministic mock data, so every screen
-            stays demoable while live AI, Firebase, Arc, and x402 adapters are
-            added in later passes.
+            VeriClaim preserves deadlines, thresholds, sources, and resolution
+            rules so generated specs can be reviewed, challenged, and shared.
           </p>
           <SampleClaimChips />
           <div className="grid gap-4 sm:grid-cols-3">
@@ -210,7 +286,7 @@ export function LandingPage() {
                 <Gavel className="mb-3 size-5 text-court-blue" />
                 <p className="font-semibold">Forger</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Creates the first MarketSpec.
+                  Transforms messy claims into binary, time-bound MarketSpecs.
                 </p>
               </CardContent>
             </Card>
@@ -219,7 +295,7 @@ export function LandingPage() {
                 <FileJson2 className="mb-3 size-5 text-court-amber" />
                 <p className="font-semibold">Critic</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Attacks ambiguity and edge cases.
+                  Attacks ambiguity, weak sources, and missing edge cases.
                 </p>
               </CardContent>
             </Card>
@@ -228,7 +304,7 @@ export function LandingPage() {
                 <BadgeCheck className="mb-3 size-5 text-court-green" />
                 <p className="font-semibold">Judge</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Blesses, revises, or rejects.
+                  Produces the verdict, score, and final resolution rule.
                 </p>
               </CardContent>
             </Card>

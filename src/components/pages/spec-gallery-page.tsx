@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { firebaseReady, listPublicSpecs } from "@/lib/firebase/firestore";
 import type { MarketSpecRecord, MarketSpecStatus } from "@/lib/types";
+import { toSafeClientError } from "@/lib/utils/safeMessages";
 
 type StatusFilter = "all" | MarketSpecStatus;
 type SortMode = "newest" | "quality" | "challenged" | "rewarded";
@@ -64,9 +65,10 @@ export function SpecGalleryPage() {
       } catch (caughtError) {
         if (active) {
           setLoadError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Could not load public specs.",
+            toSafeClientError(
+              caughtError,
+              "Could not load public specs. Check Firestore access or browser privacy settings.",
+            ),
           );
         }
       } finally {

@@ -1,53 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
-  AlertCircle,
   Award,
-  Info,
-  LogIn,
+  BadgeCheck,
+  ChevronDown,
+  Coins,
+  LayoutDashboard,
   LogOut,
-  UserRound,
-  UserRoundPlus,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  getAuthNotice,
-  signInWithDemoAccount,
-  signInWithGoogle,
   signOutUser,
   useAuthState,
   type AuthAction,
-  type AuthNotice,
 } from "@/lib/firebase/auth";
+import { STARTING_FORGE_CREDITS } from "@/lib/firebase/firestore";
 import { getUserLevel } from "@/lib/gamification/rules";
-import { cn } from "@/lib/utils";
+
+function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] || "User";
+}
+
+function initials(name: string, email: string) {
+  const source = name.trim() || email.trim() || "VC";
+  const parts = source.split(/\s+/);
+
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+
+  return source.slice(0, 2).toUpperCase();
+}
 
 export function AuthButton() {
   const { configured, loading, user, profile } = useAuthState();
   const [busy, setBusy] = useState<AuthAction | null>(null);
-  const [notice, setNotice] = useState<AuthNotice | null>(null);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const avatarUrl = profile?.photoURL || user?.photoURL || "";
   const displayName = profile?.displayName || user?.displayName || "User";
+  const email = profile?.email || user?.email || "";
   const reputation = profile?.reputation ?? 0;
+  const credits = profile?.credits ?? STARTING_FORGE_CREDITS;
   const level = getUserLevel(reputation);
+  const visibleName = firstName(displayName);
 
-  async function run(action: AuthAction) {
-    setBusy(action);
-    setNotice(null);
+  useEffect(() => {
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (
+        menuRef.current &&
+        event.target instanceof Node &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, []);
+
+  async function signOut() {
+    setBusy("out");
 
     try {
-      if (action === "google") {
-        await signInWithGoogle();
-      } else if (action === "demo") {
-        await signInWithDemoAccount();
-      } else {
-        await signOutUser();
-      }
-    } catch (caughtError) {
-      setNotice(getAuthNotice(caughtError, action));
+      await signOutUser();
+      setOpen(false);
     } finally {
       setBusy(null);
     }
@@ -70,91 +92,125 @@ export function AuthButton() {
   }
 
   if (!user) {
-    const NoticeIcon = notice?.tone === "info" ? Info : AlertCircle;
-
     return (
-      <div className="relative flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy !== null}
-          onClick={() => run("demo")}
-          className="hidden sm:inline-flex"
-        >
-          <UserRoundPlus />
-          Demo
-        </Button>
-        <Button
-          type="button"
-          variant="court"
-          size="sm"
-          disabled={busy !== null}
-          onClick={() => run("google")}
-        >
-          <LogIn />
-          Sign in
-        </Button>
-        {notice ? (
-          <div
-            role={notice.tone === "warning" ? "alert" : "status"}
-            aria-live="polite"
-            className={cn(
-              "absolute right-0 top-[calc(100%+0.5rem)] z-50 flex w-[min(22rem,calc(100vw-2rem))] items-start gap-2 rounded-md border px-3 py-2 text-xs font-medium shadow-glass backdrop-blur-xl",
-              notice.tone === "warning"
-                ? "border-amber-400/35 bg-background/95 text-amber-700 dark:text-amber-300"
-                : "border-sky-400/35 bg-background/95 text-sky-700 dark:text-sky-300",
-            )}
-          >
-            <NoticeIcon className="mt-0.5 size-3.5 shrink-0" />
-            <span className="leading-5">{notice.message}</span>
-          </div>
-        ) : null}
-      </div>
+      <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
+        <Link href="/login">Sign in</Link>
+      </Button>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="hidden items-center gap-2 2xl:flex">
-        <Badge variant="glass" className="h-9 gap-1.5 px-3">
-          {avatarUrl ? (
-            <span
-              aria-hidden="true"
-              className="size-4 rounded-full bg-cover bg-center"
-              style={{ backgroundImage: `url(${avatarUrl})` }}
-            />
-          ) : (
-            <UserRound className="size-3.5" />
-          )}
-          <span className="max-w-28 truncate">{displayName}</span>
-        </Badge>
-        <Badge variant="glass" className="h-9 px-3">
-          {profile?.credits ?? 100} credits
-        </Badge>
-        <Badge variant="success" className="h-9 px-3">
-          {reputation} rep
-        </Badge>
-        <Badge variant="violet" className="h-9 gap-1.5 px-3">
-          <Award className="size-3.5" />
-          <span className="max-w-28 truncate">{level.title}</span>
-        </Badge>
-        {profile?.badges.slice(0, 1).map((badge) => (
-          <Badge key={badge} variant="blue" className="h-9 px-3">
-            <span className="max-w-28 truncate">{badge}</span>
-          </Badge>
-        ))}
-      </div>
+    <div ref={menuRef} className="relative">
       <Button
         type="button"
         variant="outline"
         size="sm"
         disabled={busy !== null}
-        onClick={() => run("out")}
+        onClick={() => setOpen((current) => !current)}
+        className="gap-2 whitespace-nowrap pl-2 pr-2.5"
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
-        <LogOut />
-        <span className="hidden sm:inline">Sign out</span>
+        {avatarUrl ? (
+          <span
+            aria-hidden="true"
+            className="size-6 rounded-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${avatarUrl})` }}
+          />
+        ) : (
+          <span className="flex size-6 items-center justify-center rounded-full bg-violet-500 text-[11px] font-bold text-white">
+            {initials(displayName, email)}
+          </span>
+        )}
+        <span className="hidden max-w-20 truncate lg:inline">{visibleName}</span>
+        <ChevronDown className="size-3.5 text-muted-foreground" />
       </Button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+0.55rem)] z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-lg border border-border/80 bg-background/95 shadow-glass backdrop-blur-xl"
+        >
+          <div className="border-b border-border/70 p-4">
+            <div className="flex items-center gap-3">
+              {avatarUrl ? (
+                <span
+                  aria-hidden="true"
+                  className="size-10 rounded-md bg-cover bg-center"
+                  style={{ backgroundImage: `url(${avatarUrl})` }}
+                />
+              ) : (
+                <span className="flex size-10 items-center justify-center rounded-md bg-violet-500 text-sm font-bold text-white">
+                  {initials(displayName, email)}
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{displayName}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {email || "Demo profile"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 p-3">
+            <div className="rounded-md border border-border/70 bg-card/70 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Coins className="size-3.5" />
+                Credits
+              </div>
+              <p className="font-mono text-lg">{credits}</p>
+            </div>
+            <div className="rounded-md border border-border/70 bg-card/70 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Award className="size-3.5" />
+                Reputation
+              </div>
+              <p className="font-mono text-lg">{reputation}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-border/70 p-3">
+            <Badge variant="violet" className="w-full justify-start gap-1.5 py-1.5">
+              <BadgeCheck className="size-3.5" />
+              {level.title}
+            </Badge>
+            {profile?.badges?.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {profile.badges.slice(0, 4).map((badge) => (
+                  <Badge key={badge} variant="blue">
+                    {badge}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs leading-5 text-muted-foreground">
+                Badges unlock as you forge, challenge, and publish proofs.
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-2 border-t border-border/70 p-3">
+            <Button asChild variant="ghost" size="sm" className="justify-start">
+              <Link href="/dashboard" onClick={() => setOpen(false)}>
+                <LayoutDashboard />
+                Dashboard
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy !== null}
+              onClick={signOut}
+              className="justify-start"
+            >
+              <LogOut />
+              Sign out
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

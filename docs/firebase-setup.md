@@ -41,7 +41,7 @@ In **Authentication -> Settings -> Authorized domains**, add:
 
 New users receive:
 
-- `credits: 100`
+- `credits: 10`
 - `reputation: 0`
 - `badges: []`
 

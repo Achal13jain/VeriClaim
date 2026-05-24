@@ -42,6 +42,8 @@ import type {
   MarketSpecRecord,
 } from "@/lib/types";
 
+export const STARTING_FORGE_CREDITS = 10;
+
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -127,7 +129,7 @@ function profileFromUser(user: User, timestamp: string): UserProfile {
     displayName: user.displayName ?? (user.isAnonymous ? "Demo user" : "VeriClaim user"),
     email: user.email ?? "",
     photoURL: user.photoURL ?? "",
-    credits: 100,
+    credits: STARTING_FORGE_CREDITS,
     reputation: 0,
     badges: [],
     stats: { ...defaultUserStats },
@@ -195,7 +197,7 @@ function normalizeUserProfile(data: DocumentData): UserProfile {
     displayName: String(data.displayName ?? "VeriClaim user"),
     email: String(data.email ?? ""),
     photoURL: String(data.photoURL ?? ""),
-    credits: Number(data.credits ?? 100),
+    credits: Number(data.credits ?? STARTING_FORGE_CREDITS),
     reputation: Number(data.reputation ?? 0),
     badges: Array.isArray(data.badges) ? data.badges.map(String) : [],
     stats: normalizeUserStats(data.stats),

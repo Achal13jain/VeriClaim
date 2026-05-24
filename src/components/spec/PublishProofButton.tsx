@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
   publishMockArcProofResult,
 } from "@/lib/firebase/firestore";
 import type { MarketSpecRecord } from "@/lib/types";
+import { toSafeClientError } from "@/lib/utils/safeMessages";
 
 export function PublishProofButton({
   spec,
@@ -26,6 +28,7 @@ export function PublishProofButton({
     message: string;
   }) => void;
 }) {
+  const router = useRouter();
   const { configured, user } = useAuthState();
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +41,11 @@ export function PublishProofButton({
 
   async function publish() {
     if (disabledReason || !user) {
+      if (!user) {
+        router.push(`/login?next=${encodeURIComponent(`/spec/${spec.hash}`)}`);
+        return;
+      }
+
       setError(disabledReason || "Sign in before publishing a mock Arc proof.");
       return;
     }
@@ -63,9 +71,10 @@ export function PublishProofButton({
       });
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not publish this mock Arc proof.",
+        toSafeClientError(
+          caughtError,
+          "Could not publish this mock Arc proof. Check sign-in and Firestore access.",
+        ),
       );
     } finally {
       setPublishing(false);

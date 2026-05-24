@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Area,
   AreaChart,
@@ -19,6 +20,7 @@ import { ActivityFeed } from "@/components/vericlaim/activity-feed";
 import { DashboardStats } from "@/components/vericlaim/dashboard-stats";
 import { ReputationBadge } from "@/components/vericlaim/reputation-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -46,6 +48,7 @@ import type {
   MarketSpecRecord,
 } from "@/lib/types";
 import { formatHash, formatNumber } from "@/lib/utils";
+import { toSafeClientError } from "@/lib/utils/safeMessages";
 
 function isBlessedSpec(spec: MarketSpecRecord) {
   return (
@@ -191,9 +194,10 @@ export function DashboardPage() {
       } catch (caughtError) {
         if (active) {
           setLoadError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Could not load dashboard stats.",
+            toSafeClientError(
+              caughtError,
+              "Could not load dashboard stats. Check Firestore access or browser privacy settings.",
+            ),
           );
         }
       } finally {
@@ -253,8 +257,8 @@ export function DashboardPage() {
             Dashboard.
           </h1>
           <p className="text-muted-foreground">
-            Monitor MarketSpec quality, Arc proof activity, open challenges,
-            credits, badges, and reputation leaderboards from saved public specs.
+            Monitor public MarketSpec quality, Arc proof activity, open
+            challenges, credits, badges, and reputation leaderboards.
           </p>
         </div>
         <ReputationBadge
@@ -267,6 +271,23 @@ export function DashboardPage() {
         <Card className="glass-panel">
           <CardContent className="p-4 text-sm text-destructive">
             {loadError}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {!user ? (
+        <Card className="glass-panel">
+          <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+            <div>
+              <p className="font-semibold">Public dashboard view</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Sign in to see your Forge Credits, reputation, badges,
+                challenges, mock payments, and saved MarketSpecs.
+              </p>
+            </div>
+            <Button asChild variant="court" className="shrink-0">
+              <Link href="/login?next=/dashboard">Sign in for my dashboard</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : null}
@@ -322,7 +343,24 @@ export function DashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-        <PaymentHistory payments={payments} loading={loading} />
+        {user ? (
+          <PaymentHistory payments={payments} loading={loading} />
+        ) : (
+          <Card className="glass-panel">
+            <CardHeader>
+              <CardTitle>Personal activity</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
+              <p>
+                Your credits, badges, challenges, and payment receipts appear
+                here after sign-in.
+              </p>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/login?next=/dashboard">Sign in</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         <Card className="glass-panel">
           <CardHeader>
             <CardTitle>Mock x402 unlock layer</CardTitle>

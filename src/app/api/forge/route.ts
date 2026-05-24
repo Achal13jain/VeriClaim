@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { forgeClaim } from "@/lib/agents/forgeClaim";
 import { ForgeRequestSchema } from "@/lib/agents/schemas";
+import { getSafeForgeWarning } from "@/lib/utils/safeMessages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,8 +92,10 @@ export async function POST(request: NextRequest) {
     "x-ratelimit-remaining": String(rateLimit.remaining),
   };
 
-  if (result.warning) {
-    headers["x-vericlaim-warning"] = safeHeaderValue(result.warning);
+  const publicWarning = getSafeForgeWarning(result.warning, result.mode);
+
+  if (publicWarning) {
+    headers["x-vericlaim-warning"] = safeHeaderValue(publicWarning);
   }
 
   return NextResponse.json(result.response, { headers });

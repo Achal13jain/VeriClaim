@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
       headers: {
         "x-vericlaim-mode": "demo",
         "x-vericlaim-warning":
-          "Live Judge failed. Returned deterministic demo challenge ruling.",
+          "Challenge Judge used validated fallback mode.",
         "x-ratelimit-remaining": String(rateLimit.remaining),
       },
     });
