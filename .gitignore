@@ -30,6 +30,7 @@ pnpm-debug.log*
 .DS_Store
 *.pem
 serviceAccount.json
+serviceAccount*.json
 *-service-account.json
 
 # vercel
@@ -51,5 +52,4 @@ out
 !/docs/ARCHITECTURE.md
 !/docs/RELEASE_CHECKLIST.md
 !/docs/DEMO_SCRIPT.md
-!/docs/HACKATHON_SUBMISSION.md
 !/docs/ARC_CLI_NOTES.md

@@ -39,20 +39,18 @@ Optional live AI keys:
 - `OPENROUTER_API_KEY`
 - `OPENROUTER_MODEL`
 
-Future-only variables for real integrations:
+Future-only values for real integrations:
 
-- `FIREBASE_CLIENT_EMAIL`
-- `FIREBASE_PRIVATE_KEY`
 - `NEXT_PUBLIC_ARC_CHAIN_ID`
 - `NEXT_PUBLIC_ARC_RPC_URL`
-- `NEXT_PUBLIC_ARC_EXPLORER_URL`
 - `NEXT_PUBLIC_VERICLAIM_CONTRACT_ADDRESS`
-- `NEXT_PUBLIC_MARKET_SPEC_REGISTRY_ADDRESS`
 - `PRIVATE_KEY`
 - `ARC_RPC_URL`
 - `X402_RECEIVER_ADDRESS`
 
-Never put private keys or API secrets in `NEXT_PUBLIC_*` variables.
+Firebase Admin service account values are not used in the current MVP. Never
+put private keys, provider API keys, service account values, or other secrets in
+`NEXT_PUBLIC_*` variables.
 
 ## Firebase Rules
 

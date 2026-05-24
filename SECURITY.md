@@ -7,7 +7,9 @@ process production payments, or run trading systems.
 ## Reporting Issues
 
 Please report security issues privately to the project maintainer before opening
-a public issue. Include:
+a public issue. Use GitHub private vulnerability reporting if it is available,
+or contact the maintainer through their GitHub profile before posting details
+publicly. Include:
 
 - affected route, component, or workflow
 - steps to reproduce
