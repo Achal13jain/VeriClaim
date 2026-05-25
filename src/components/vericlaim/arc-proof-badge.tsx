@@ -17,7 +17,7 @@ export function ArcProofBadge({
     return (
       <Badge variant="glass" className="gap-1.5">
         <Link2 className="size-3.5" />
-        Arc proof pending
+        Mock Arc proof not published
       </Badge>
     );
   }

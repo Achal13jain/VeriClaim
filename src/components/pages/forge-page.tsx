@@ -11,9 +11,13 @@ import {
   BadgeDollarSign,
   Coins,
   ExternalLink,
+  FileCheck2,
+  Gavel,
   Loader2,
   Play,
   Save,
+  ShieldQuestion,
+  Sparkles,
 } from "lucide-react";
 
 import { PaymentModal } from "@/components/payments/PaymentModal";
@@ -31,7 +35,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -68,33 +71,75 @@ import { getSpecUrlPath, slugify } from "@/lib/utils/slugify";
 const forgePhases: Array<{
   event: string;
   label: string;
+  shortLabel: string;
+  description: string;
   role?: AgentRole;
   progress: number;
 }> = [
   {
     event: "forger:running",
     label: "Forger running",
+    shortLabel: "Forger",
+    description: "Drafting binary question, deadline, source, and rule.",
     role: "forger",
     progress: 25,
   },
   {
     event: "critic:running",
     label: "Critic running",
+    shortLabel: "Critic",
+    description: "Attacking ambiguity, weak sources, and edge cases.",
     role: "critic",
     progress: 55,
   },
   {
     event: "judge:running",
     label: "Judge running",
+    shortLabel: "Judge",
+    description: "Finalizing verdict, score, and resolution language.",
     role: "judge",
     progress: 82,
   },
   {
     event: "complete",
     label: "MarketSpec ready",
+    shortLabel: "Ready",
+    description: "Validated MarketSpec is ready for review and saving.",
     progress: 100,
   },
 ];
+
+const phaseIcons = [Sparkles, ShieldQuestion, Gavel, FileCheck2];
+
+function phaseState({
+  index,
+  phaseIndex,
+  isForging,
+  hasResponse,
+}: {
+  index: number;
+  phaseIndex: number;
+  isForging: boolean;
+  hasResponse: boolean;
+}) {
+  if (hasResponse && !isForging) {
+    return "complete";
+  }
+
+  if (!isForging) {
+    return "idle";
+  }
+
+  if (index < phaseIndex) {
+    return "complete";
+  }
+
+  if (index === phaseIndex) {
+    return "active";
+  }
+
+  return "pending";
+}
 
 const sourceTypes: SourceType[] = [
   "manual",
@@ -330,6 +375,16 @@ export function ForgePage() {
 
   const jsonPreview = forgeResponse ?? recordToPreviewResponse(previewSpec);
   const activePhase = forgePhases[phaseIndex];
+  const progressValue = isForging
+    ? activePhase.progress
+    : forgeResponse
+      ? 100
+      : 6;
+  const courtStatusLabel = isForging
+    ? activePhase.label
+    : forgeResponse
+      ? "MarketSpec ready"
+      : "Ready to run";
   const freeForgesUsed = profile?.freeForgeUsed ?? 0;
   const freeForgesRemaining = Math.max(0, FREE_FORGE_LIMIT - freeForgesUsed);
   const creditBalance = profile?.credits ?? 0;
@@ -828,18 +883,108 @@ export function ForgePage() {
           <Card className="glass-panel">
             <CardHeader>
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                <CardTitle>Live court progress</CardTitle>
-                <Badge variant="glass" className="font-mono">
-                  {activePhase.event}
+                <div>
+                  <CardTitle>Live court progress</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {isForging
+                      ? "The agents are building and reviewing the MarketSpec."
+                      : forgeResponse
+                        ? "The latest MarketSpec is validated and ready."
+                        : "Start generation to send the claim through the AI Court."}
+                  </p>
+                </div>
+                <Badge
+                  variant={isForging ? "blue" : forgeResponse ? "success" : "glass"}
+                  className="gap-1.5 font-mono"
+                >
+                  {isForging ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                  {courtStatusLabel}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <Progress value={activePhase.progress} />
+              <div className="rounded-lg border border-border/70 bg-background/60 p-4">
+                <div className="relative h-3 overflow-hidden rounded-full bg-slate-950/10 dark:bg-slate-950/70">
+                  <div
+                    className={[
+                      "h-full rounded-full bg-[linear-gradient(90deg,#39a7ff,#35f2a4,#9b7cff)] transition-all duration-700 ease-out",
+                      isForging
+                        ? "shadow-[0_0_28px_rgba(53,242,164,0.35)]"
+                        : "",
+                    ].join(" ")}
+                    style={{ width: `${progressValue}%` }}
+                  />
+                  {isForging ? (
+                    <div className="absolute inset-0 animate-[pulse_1.2s_ease-in-out_infinite] bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent)]" />
+                  ) : null}
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                  {forgePhases.map((phase, index) => {
+                    const Icon = phaseIcons[index];
+                    const state = phaseState({
+                      index,
+                      phaseIndex,
+                      isForging,
+                      hasResponse: Boolean(forgeResponse),
+                    });
+
+                    return (
+                      <div
+                        key={phase.event}
+                        className={[
+                          "relative overflow-hidden rounded-md border p-3 transition",
+                          state === "active"
+                            ? "border-court-green/50 bg-court-green/12 shadow-[0_0_24px_rgba(53,242,164,0.12)]"
+                            : state === "complete"
+                              ? "border-sky-400/35 bg-sky-400/10"
+                              : "border-border/70 bg-card/60",
+                        ].join(" ")}
+                      >
+                        {state === "active" ? (
+                          <div className="absolute inset-x-0 top-0 h-px animate-pulse bg-court-green" />
+                        ) : null}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={[
+                                "flex size-8 items-center justify-center rounded-md border",
+                                state === "active"
+                                  ? "border-emerald-400/40 bg-emerald-400/15 text-court-green"
+                                  : state === "complete"
+                                    ? "border-sky-400/35 bg-sky-400/12 text-court-blue"
+                                    : "border-border/70 bg-background/60 text-muted-foreground",
+                              ].join(" ")}
+                            >
+                              <Icon className="size-4" />
+                            </span>
+                            <div>
+                              <p className="text-sm font-semibold">
+                                {phase.shortLabel}
+                              </p>
+                              <p className="font-mono text-[10px] uppercase text-muted-foreground">
+                                {state}
+                              </p>
+                            </div>
+                          </div>
+                          {state === "active" ? (
+                            <Loader2 className="size-4 animate-spin text-court-green" />
+                          ) : null}
+                        </div>
+                        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                          {phase.description}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex items-center gap-3 rounded-md border border-border/70 bg-background/60 p-3">
                 <ArrowRight className="size-4 text-court-green" />
-                <span className="text-sm">{activePhase.label}</span>
+                <span className="text-sm">{courtStatusLabel}</span>
               </div>
+
               <AgentCourtTimeline
                 steps={previewSpec.agentTrace}
                 activeRole={activePhase.role}

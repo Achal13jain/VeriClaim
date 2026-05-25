@@ -11,13 +11,14 @@ import { formatHash } from "@/lib/utils";
 
 export function ArcProofPanel({ spec }: { spec: MarketSpecRecord }) {
   const isMockProof = spec.arcMode === "mock";
+  const usesMockProofFlow = !spec.arcPublished || isMockProof;
 
   return (
     <Card className="glass-panel h-fit min-w-0">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldCheck className="size-5 text-court-blue" />
-          Arc proof
+          {usesMockProofFlow ? "Mock Arc proof" : "Arc proof"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -29,18 +30,20 @@ export function ArcProofPanel({ spec }: { spec: MarketSpecRecord }) {
           <div className="text-sm text-muted-foreground">Status</div>
           <div className="mt-2 flex flex-wrap gap-2">
             <Badge variant={spec.arcPublished ? "blue" : "glass"}>
-              {spec.arcPublished ? "Published" : "Pending"}
+              {spec.arcPublished ? "Published" : "Not published yet"}
             </Badge>
             {spec.arcPublished ? (
               <Badge variant={isMockProof ? "violet" : "success"}>
-                {isMockProof ? "Mock Testnet Proof" : "Contract Proof"}
+                {isMockProof ? "Mock Arc Proof" : "Contract Proof"}
               </Badge>
             ) : null}
           </div>
         </div>
         <div className="rounded-md border border-border/70 bg-background/60 p-3">
           <div className="text-sm text-muted-foreground">Chain</div>
-          <div className="mt-1 font-mono text-xs">Arc Testnet</div>
+          <div className="mt-1 font-mono text-xs">
+            {usesMockProofFlow ? "Arc Testnet (mock mode)" : "Arc Testnet"}
+          </div>
         </div>
         <div className="rounded-md border border-border/70 bg-background/60 p-3">
           <div className="text-sm text-muted-foreground">Tx hash</div>
@@ -64,7 +67,7 @@ export function ArcProofPanel({ spec }: { spec: MarketSpecRecord }) {
           ) : (
             <div className="mt-1 flex items-center gap-2 font-mono text-xs text-muted-foreground">
               <Link2 className="size-3.5" />
-              pending
+              Not published yet
             </div>
           )}
         </div>
@@ -79,7 +82,9 @@ export function ArcProofPanel({ spec }: { spec: MarketSpecRecord }) {
         <p className="rounded-md border border-court-violet/25 bg-court-violet/10 p-3 text-xs leading-5 text-muted-foreground">
           {isMockProof
             ? "Mock Arc proof record for the MVP. No real on-chain transaction is claimed; real contract publishing is planned."
-            : "Only hashes and metadata references belong on Arc; full claim text stays in Firestore."}
+            : spec.arcPublished
+              ? "Only hashes and metadata references belong on Arc; full claim text stays in Firestore."
+              : "Not published yet. Mock Arc proof publishing creates Firestore metadata only; no real on-chain transaction is claimed."}
         </p>
       </CardContent>
     </Card>

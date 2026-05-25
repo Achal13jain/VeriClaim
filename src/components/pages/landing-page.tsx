@@ -8,10 +8,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   ArrowRight,
   BadgeCheck,
+  ExternalLink,
   FileJson2,
   Gavel,
+  Github,
   ShieldCheck,
   Sparkles,
+  Trophy,
 } from "lucide-react";
 
 import { AgentCourtTimeline } from "@/components/vericlaim/agent-court-timeline";
@@ -25,6 +28,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { featuredSpec, mockAgents, mockMarketSpecs } from "@/lib/mock-data";
+
+const githubUrl = "https://github.com/Achal13jain/VeriClaim";
 
 const marketSpecJson = {
   source_claim: featuredSpec.sourceClaim,
@@ -163,6 +168,13 @@ export function LandingPage() {
               </Button>
               <Button asChild variant="glass" size="lg">
                 <Link href="/specs">Explore Specs</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link href={githubUrl} target="_blank" rel="noreferrer">
+                  <Github />
+                  Open source on GitHub
+                  <ExternalLink />
+                </Link>
               </Button>
             </div>
             <div
@@ -368,6 +380,42 @@ export function LandingPage() {
           {mockMarketSpecs.map((spec) => (
             <MarketSpecCard key={spec.hash} spec={spec} compact />
           ))}
+        </div>
+      </section>
+
+      <section className="page-shell pt-4">
+        <div className="glass-panel overflow-hidden rounded-lg border-cyan-400/25 bg-slate-950/85 text-white dark:bg-slate-950/70">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-cyan-400/35 bg-cyan-400/12 text-cyan-300">
+                <Trophy className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-mono text-sm font-semibold text-cyan-200">
+                  Built for Agora Agents Hackathon · Arc-ready MarketSpec
+                  infrastructure
+                </p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                  Open-source verification UX for claim quality, challengeable
+                  specs, and clearly labeled mock Arc/x402 flows.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild variant="court" size="sm">
+                <Link href={githubUrl} target="_blank" rel="noreferrer">
+                  View on GitHub
+                  <ExternalLink />
+                </Link>
+              </Button>
+              <Button asChild variant="glass" size="sm">
+                <Link href="/specs">Explore specs</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/forge">Forge a spec</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
     </main>
